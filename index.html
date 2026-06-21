@@ -400,6 +400,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       <div style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;padding:14px;display:flex;flex-direction:column;gap:6px;">
         <p id="sync-status" style="font-size:13px;font-weight:500;">⏳ Laden...</p>
         <p id="laatst-bewaard" style="font-size:11px;color:#94a3b8;">💾 Nog niet bewaard</p>
+        <div id="sync-detail" style="display:none;flex-direction:column;gap:6px;margin-top:6px;"></div>
       </div>
       <p class="slabel" style="margin-top:8px;">Integraties</p>
       <div style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;padding:14px;display:flex;flex-direction:column;gap:10px;">
@@ -586,19 +587,50 @@ async function verwerkQueue(){
 
 function updateSyncStatus(){
   const el = g('sync-status');
+  const detailEl = g('sync-detail');
   if(!el) return;
-  const wachtend = syncQueue.filter(q => !q.mislukt && (q.pogingen||0) < MAX_POGINGEN).length;
-  const mislukt = syncQueue.filter(q => q.mislukt || (q.pogingen||0) >= MAX_POGINGEN).length;
+  const wachtendItems = syncQueue.filter(q => !q.mislukt && (q.pogingen||0) < MAX_POGINGEN);
+  const misluktItems = syncQueue.filter(q => q.mislukt || (q.pogingen||0) >= MAX_POGINGEN);
 
-  if(wachtend > 0){
-    el.innerHTML = `⏳ ${wachtend} item(s) wachten op sync`;
+  if(wachtendItems.length > 0){
+    el.innerHTML = `⏳ ${wachtendItems.length} item(s) wachten op sync`;
     el.style.color = '#f59e0b';
-  } else if(mislukt > 0){
-    el.innerHTML = `❌ ${mislukt} item(s) definitief mislukt — <a href="#" onclick="wisFaaldeItems();return false;" style="color:#dc2626;text-decoration:underline;">wissen</a>`;
+  } else if(misluktItems.length > 0){
+    el.innerHTML = `❌ ${misluktItems.length} item(s) definitief mislukt — <a href="#" onclick="wisFaaldeItems();return false;" style="color:#dc2626;text-decoration:underline;">wissen</a>`;
     el.style.color = '#dc2626';
   } else {
     el.innerHTML = isOnline() ? '✅ Alles gesynchroniseerd' : '📵 Offline — data lokaal opgeslagen';
     el.style.color = isOnline() ? '#16a34a' : '#64748b';
+  }
+
+  // ✅ Detail-overzicht: welke items precies staan te wachten of zijn mislukt
+  if(detailEl){
+    const alleItems = [...wachtendItems.map(i=>({...i, _status:'wachtend'})), ...misluktItems.map(i=>({...i, _status:'mislukt'}))];
+    if(alleItems.length === 0){
+      detailEl.innerHTML = '';
+      detailEl.style.display = 'none';
+    } else {
+      detailEl.style.display = 'flex';
+      detailEl.innerHTML = alleItems.map(item => {
+        const tijd = item.timestamp ? new Date(item.timestamp).toLocaleString('nl-BE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '?';
+        const typeLabel = {
+          aanmelden: '📝 Aanmelding',
+          afmelden: '🚪 Afmelding',
+          uploadFoto: '📸 Foto-upload',
+          sendEmail: '✉️ E-mail',
+          saveMedewerkers: '👥 Medewerkers opslaan',
+          savePin: '🔐 Pincode opslaan'
+        }[item.type] || item.type;
+        const naamInfo = item.naam ? ' — '+item.naam : (item.params && item.params.bezoeker_naam ? ' — '+item.params.bezoeker_naam : '');
+        const statusBadge = item._status === 'mislukt'
+          ? '<span class="badge badge-out">Mislukt</span>'
+          : `<span class="badge badge-in">Poging ${(item.pogingen||0)}/${MAX_POGINGEN}</span>`;
+        return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;">
+          <div><strong>${typeLabel}</strong>${naamInfo}<br><span style="color:#94a3b8;font-size:11px;">${tijd}</span></div>
+          ${statusBadge}
+        </div>`;
+      }).join('');
+    }
   }
 }
 
