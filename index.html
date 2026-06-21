@@ -291,14 +291,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 <div class="screen" id="s-admin">
   <div class="top-bar">
     <div class="top-row">
-      <p style="color:white;font-size:16px;font-weight:700;">🛡️ Admin</p>
+      <p style="color:white;font-size:16px;font-weight:700;" id="admin-rol-titel">🛡️ Admin</p>
       <button class="logout-btn" onclick="goTo('s-welkom')">🚪 Afsluiten</button>
     </div>
   </div>
   <div class="admin-tabs">
     <button class="atab active" onclick="switchATab('log',this)">📋 Logboek</button>
     <button class="atab" onclick="switchATab('mw',this)">👥 Medewerkers</button>
-    <button class="atab" onclick="switchATab('inst',this)">⚙️ Instellingen</button>
+    <button class="atab" id="tab-instellingen" onclick="switchATab('inst',this)">⚙️ Instellingen</button>
   </div>
   <div class="body">
 
@@ -353,11 +353,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
           <span id="toggle-knob" style="position:absolute;height:20px;width:20px;left:3px;bottom:3px;background-color:white;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
         </label>
       </div>
-      <p class="slabel" style="margin-top:8px;">Pincode wijzigen</p>
+      <p class="slabel" style="margin-top:8px;">Pincode admin (volledige toegang)</p>
       <div style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;padding:14px;display:flex;flex-direction:column;gap:10px;">
-        <input type="password" id="pin-new" maxlength="4" placeholder="Nieuwe pincode (4 cijfers)" style="height:42px;border-radius:8px;border:2px solid #e2e8f0;background:#ffffff;padding:0 12px;font-size:15px;color:#1e293b;width:100%;outline:none;" />
-        <button class="btn-save" onclick="savePin()" style="height:42px;font-size:14px;">Pincode opslaan</button>
+        <input type="password" id="pin-new" maxlength="4" placeholder="Nieuwe admin-pincode (4 cijfers)" style="height:42px;border-radius:8px;border:2px solid #e2e8f0;background:#ffffff;padding:0 12px;font-size:15px;color:#1e293b;width:100%;outline:none;" />
+        <button class="btn-save" onclick="savePin()" style="height:42px;font-size:14px;">Admin-pincode opslaan</button>
         <p id="pin-save-msg" style="font-size:12px;color:#16a34a;min-height:16px;font-weight:600;"></p>
+      </div>
+
+      <p class="slabel" style="margin-top:8px;">Pincode gebruiker (enkel raadplegen)</p>
+      <div style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;padding:14px;display:flex;flex-direction:column;gap:10px;">
+        <p style="font-size:11px;color:#94a3b8;margin:0;">Met deze pincode kan iemand het logboek en de medewerkerslijst raadplegen, medewerkers toevoegen, maar niets verwijderen en geen instellingen wijzigen.</p>
+        <input type="password" id="gebruiker-pin-new" maxlength="4" placeholder="Nieuwe gebruiker-pincode (4 cijfers)" style="height:42px;border-radius:8px;border:2px solid #e2e8f0;background:#ffffff;padding:0 12px;font-size:15px;color:#1e293b;width:100%;outline:none;" />
+        <button class="btn-save" onclick="saveGebruikerPin()" style="height:42px;font-size:14px;">Gebruiker-pincode opslaan</button>
+        <p id="gebruiker-pin-save-msg" style="font-size:12px;color:#16a34a;min-height:16px;font-weight:600;"></p>
       </div>
 
       <p class="slabel" style="margin-top:8px;">🗑️ Automatische foto-cleanup</p>
@@ -428,16 +436,18 @@ const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwwwfmYCPrc4zVIKKEGN
 const LS_MWS = 'postnl_mws';
 const LS_BEZ = 'postnl_bezoekers';
 const LS_PIN = 'postnl_pin';
+const LS_GEBRUIKERPIN = 'postnl_gebruiker_pin';
 const LS_QUEUE = 'postnl_queue';
 
 // ══════════════════════════════════════
 // STATE
 // ══════════════════════════════════════
-let pinCode='1234', pinInput='', lang='nl', selAfId=null, logoClicks=0, logoTimer=null;
+let pinCode='1234', gebruikerCode='5678', huidigeRol='admin', pinInput='', lang='nl', selAfId=null, logoClicks=0, logoTimer=null;
 let selectedIds = new Set();
 let mws = [];
 let bezoekers = [];
 let syncQueue = [];
+let verstuurdeMailIds = new Set(); // ✅ FIX: voorkomt dat dezelfde mail 2x verstuurd wordt bij dubbele queue-verwerking
 let fotoBase64 = null;
 let cameraStream = null;
 let fotoVerplicht = false;
@@ -465,6 +475,7 @@ function slaLokaalmOp(){
     localStorage.setItem(LS_MWS, JSON.stringify(mws));
     localStorage.setItem(LS_BEZ, JSON.stringify(alleHistorieBezoekers));
     localStorage.setItem(LS_PIN, pinCode);
+    localStorage.setItem(LS_GEBRUIKERPIN, gebruikerCode);
     localStorage.setItem(LS_QUEUE, JSON.stringify(syncQueue));
     localStorage.setItem(LS_FOTOVERPLICHT, fotoVerplicht ? '1' : '0');
     laatstBewaard = new Date();
@@ -488,6 +499,8 @@ function laadLokaal(){
     }
     const pinData = localStorage.getItem(LS_PIN);
     if(pinData) pinCode = pinData;
+    const gebruikerPinData = localStorage.getItem(LS_GEBRUIKERPIN);
+    if(gebruikerPinData) gebruikerCode = gebruikerPinData;
     const queueData = localStorage.getItem(LS_QUEUE);
     if(queueData) syncQueue = JSON.parse(queueData);
     const fvData = localStorage.getItem(LS_FOTOVERPLICHT);
@@ -521,77 +534,96 @@ function voegToeAanQueue(item){
 
 const MAX_POGINGEN = 5; // Na 5 mislukte pogingen: item markeren als 'mislukt' ipv eindeloos proberen
 
+let isVerwerkingActief = false; // ✅ FIX: voorkomt dat verwerkQueue 2x parallel draait (oorzaak van dubbele aanmeldingen/mails bij sync)
+
 async function verwerkQueue(){
+  if(isVerwerkingActief){ console.log('[Queue] Verwerking al actief, sla deze aanroep over.'); return; }
   if(!isOnline() || syncQueue.length === 0){ updateSyncStatus(); return; }
-  const teVerwerken = [...syncQueue];
-  for(const item of teVerwerken){
-    if(item.pogingen >= MAX_POGINGEN){
-      item.mislukt = true;
-      continue; // sla over, telt niet meer mee als "wachtend"
-    }
-    try {
-      if(item.type === 'aanmelden' || item.type === 'afmelden'){
-        await fetch(SHEETS_URL, {
-          method:'POST', mode:'no-cors',
-          headers:{'Content-Type':'text/plain;charset=utf-8'},
-          body: JSON.stringify(item)
-        });
-        syncQueue = syncQueue.filter(q => q.id !== item.id);
+  isVerwerkingActief = true;
+  try {
+    const teVerwerken = [...syncQueue];
+    for(const item of teVerwerken){
+      if(item.pogingen >= MAX_POGINGEN){
+        item.mislukt = true;
+        continue; // sla over, telt niet meer mee als "wachtend"
       }
-      if(item.type === 'uploadFoto'){
-        const res = await fetch(SHEETS_URL, {
-          method:'POST',
-          headers:{'Content-Type':'text/plain;charset=utf-8'},
-          body: JSON.stringify(item)
-        });
-        const text = await res.text();
-        const json = JSON.parse(text);
-        if(json.status === 'ok' && json.data && json.data.fotoUrl){
-          const bez = bezoekers.find(b => b.id === item.bezoekerId);
-          if(bez) bez.fotoUrl = json.data.fotoUrl;
-          const logItem = logboekData.find(b => b.naam === item.naam && b.datum === item.datum);
-          if(logItem) logItem.fotoUrl = json.data.fotoUrl;
-          slaLokaalmOp();
-          // ✅ FIX: koppel de fotoUrl ook terug aan de al bestaande Sheets-rij
-          // (die rij is mogelijk al zonder foto aangemaakt toen de aanmelding zelf gesynchroniseerd werd)
+      try {
+        if(item.type === 'aanmelden'){
+          // ✅ FIX: unieke clientId meesturen zodat Apps Script dubbele aanroepen kan herkennen
           await fetch(SHEETS_URL, {
             method:'POST', mode:'no-cors',
             headers:{'Content-Type':'text/plain;charset=utf-8'},
-            body: JSON.stringify({type:'koppelFotoAanRij', naam:item.naam, datum:item.datum, fotoUrl:json.data.fotoUrl})
+            body: JSON.stringify({...item, clientId: item.id})
           });
           syncQueue = syncQueue.filter(q => q.id !== item.id);
-        } else {
-          throw new Error('Geen fotoUrl in respons');
         }
+        if(item.type === 'afmelden'){
+          await fetch(SHEETS_URL, {
+            method:'POST', mode:'no-cors',
+            headers:{'Content-Type':'text/plain;charset=utf-8'},
+            body: JSON.stringify({...item, clientId: item.id})
+          });
+          syncQueue = syncQueue.filter(q => q.id !== item.id);
+        }
+        if(item.type === 'uploadFoto'){
+          const res = await fetch(SHEETS_URL, {
+            method:'POST',
+            headers:{'Content-Type':'text/plain;charset=utf-8'},
+            body: JSON.stringify(item)
+          });
+          const text = await res.text();
+          const json = JSON.parse(text);
+          if(json.status === 'ok' && json.data && json.data.fotoUrl){
+            const bez = bezoekers.find(b => b.id === item.bezoekerId);
+            if(bez) bez.fotoUrl = json.data.fotoUrl;
+            const logItem = logboekData.find(b => b.naam === item.naam && b.datum === item.datum);
+            if(logItem) logItem.fotoUrl = json.data.fotoUrl;
+            slaLokaalmOp();
+            await fetch(SHEETS_URL, {
+              method:'POST', mode:'no-cors',
+              headers:{'Content-Type':'text/plain;charset=utf-8'},
+              body: JSON.stringify({type:'koppelFotoAanRij', naam:item.naam, datum:item.datum, fotoUrl:json.data.fotoUrl})
+            });
+            syncQueue = syncQueue.filter(q => q.id !== item.id);
+          } else {
+            throw new Error('Geen fotoUrl in respons');
+          }
+        }
+        if(item.type === 'sendEmail'){
+          // ✅ FIX: clientId meegeven zodat een dubbele queue-entry niet 2x dezelfde mail stuurt
+          if(!verstuurdeMailIds.has(item.id)){
+            await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, item.params);
+            verstuurdeMailIds.add(item.id);
+          }
+          syncQueue = syncQueue.filter(q => q.id !== item.id);
+        }
+        if(item.type === 'saveMedewerkers'){
+          await fetch(SHEETS_URL, {
+            method:'POST', mode:'no-cors',
+            headers:{'Content-Type':'text/plain;charset=utf-8'},
+            body: JSON.stringify(item)
+          });
+          syncQueue = syncQueue.filter(q => q.id !== item.id);
+        }
+        if(item.type === 'savePin'){
+          await fetch(SHEETS_URL, {
+            method:'POST', mode:'no-cors',
+            headers:{'Content-Type':'text/plain;charset=utf-8'},
+            body: JSON.stringify(item)
+          });
+          syncQueue = syncQueue.filter(q => q.id !== item.id);
+        }
+      } catch(e){
+        console.error('Queue item mislukt (poging '+(item.pogingen+1)+'/'+MAX_POGINGEN+'):', item.type, e);
+        const queueItem = syncQueue.find(q => q.id === item.id);
+        if(queueItem) queueItem.pogingen = (queueItem.pogingen||0) + 1;
       }
-      if(item.type === 'sendEmail'){
-        await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, item.params);
-        syncQueue = syncQueue.filter(q => q.id !== item.id);
-      }
-      if(item.type === 'saveMedewerkers'){
-        await fetch(SHEETS_URL, {
-          method:'POST', mode:'no-cors',
-          headers:{'Content-Type':'text/plain;charset=utf-8'},
-          body: JSON.stringify(item)
-        });
-        syncQueue = syncQueue.filter(q => q.id !== item.id);
-      }
-      if(item.type === 'savePin'){
-        await fetch(SHEETS_URL, {
-          method:'POST', mode:'no-cors',
-          headers:{'Content-Type':'text/plain;charset=utf-8'},
-          body: JSON.stringify(item)
-        });
-        syncQueue = syncQueue.filter(q => q.id !== item.id);
-      }
-    } catch(e){
-      console.error('Queue item mislukt (poging '+(item.pogingen+1)+'/'+MAX_POGINGEN+'):', item.type, e);
-      const queueItem = syncQueue.find(q => q.id === item.id);
-      if(queueItem) queueItem.pogingen = (queueItem.pogingen||0) + 1;
     }
+    slaLokaalmOp();
+    updateSyncStatus();
+  } finally {
+    isVerwerkingActief = false; // ✅ vergrendeling altijd vrijgeven, ook bij een fout
   }
-  slaLokaalmOp();
-  updateSyncStatus();
 }
 
 function updateSyncStatus(){
@@ -686,8 +718,8 @@ async function sheetsAfmelden(b){
 async function sheetsSaveMedewerkers(){
   await sheetsPost({type:'saveMedewerkers', medewerkers: mws.map(m=>({naam:m.naam,functie:m.functie,afdeling:m.afdeling,email:m.email,cc:m.cc||''}))});
 }
-async function sheetsSavePin(pin){
-  await sheetsPost({type:'savePin', pincode: pin});
+async function sheetsSavePin(){
+  await sheetsPost({type:'savePin', pincode: pinCode, gebruikerCode: gebruikerCode});
 }
 
 // ══════════════════════════════════════
@@ -757,10 +789,12 @@ function toonLaatsteRun(){
 async function saveCleanupSettings(){
   const dag = g('cleanup-dag').value;
   const uur = g('cleanup-uur').value;
-  const dagenOud = g('cleanup-dagenoud').value || 30;
+  const dagenOudRaw = g('cleanup-dagenoud').value;
+  let dagenOudParsed = parseInt(dagenOudRaw, 10);
+  if(isNaN(dagenOudParsed)) dagenOudParsed = 30;
   cleanupSettings.dag = parseInt(dag);
   cleanupSettings.uur = parseInt(uur);
-  cleanupSettings.dagenOud = parseInt(dagenOud);
+  cleanupSettings.dagenOud = dagenOudParsed;
 
   s('cleanup-save-msg', '⏳ Opslaan...');
   const ok = await sheetsPost({
@@ -783,7 +817,13 @@ async function runCleanupNu(){
     s('cleanup-test-result', '📵 Geen internet — test niet mogelijk');
     return;
   }
-  const dagenOud = parseInt(g('cleanup-dagenoud').value) || cleanupSettings.dagenOud || 30;
+  // ✅ FIX: 0 is een geldige waarde en mag niet door || vervangen worden door de standaardwaarde
+  const ingevoerd = g('cleanup-dagenoud').value;
+  let dagenOud = parseInt(ingevoerd, 10);
+  if(isNaN(dagenOud)){
+    dagenOud = (cleanupSettings.dagenOud !== undefined && cleanupSettings.dagenOud !== null) ? cleanupSettings.dagenOud : 30;
+  }
+  console.log('[Cleanup] dagenOud die verstuurd wordt:', dagenOud);
   s('cleanup-test-result', '⏳ Cleanup wordt uitgevoerd...');
   try {
     const res = await fetch(SHEETS_URL, {
@@ -880,21 +920,31 @@ async function laadData(){
   // Dan online ophalen als internet beschikbaar
   if(isOnline()){
     try {
-      const [mwData, pinData, bevData] = await Promise.all([
+      const [mwData, pinData, bevData, cleanupData] = await Promise.all([
         sheetsGet('getMedewerkers'),
         sheetsGet('getPin'),
-        sheetsGet('getBezoekers')
+        sheetsGet('getBezoekers'),
+        sheetsGet('getCleanupSettings')
       ]);
       if(mwData && mwData.length > 0){
         mws = mwData.map((m,i)=>({id:'mw'+i+'_'+Date.now(), naam:m.naam, functie:m.functie, afdeling:m.afdeling, email:m.email, cc:m.cc||''}));
       }
       if(pinData && pinData.pincode) pinCode = String(pinData.pincode);
+      if(pinData && pinData.gebruikerCode) gebruikerCode = String(pinData.gebruikerCode);
+
+      // ✅ FIX: cleanup-instellingen ook bij opstart inladen, niet enkel bij openen admin
+      if(cleanupData){
+        cleanupSettings.dag = parseInt(cleanupData.dag) || 1;
+        cleanupSettings.uur = parseInt(cleanupData.uur) || 3;
+        cleanupSettings.dagenOud = (cleanupData.dagenOud !== undefined && cleanupData.dagenOud !== null && cleanupData.dagenOud !== '') ? parseInt(cleanupData.dagenOud) : 30;
+        cleanupSettings.laatsteRun = cleanupData.laatsteRun || '';
+      }
 
       // ✅ FIX: MERGEN in plaats van overschrijven — nooit een lokale bezoeker verliezen
       if(bevData){
         const today = vdg();
-        const sheetsVandaag = bevData.filter(b=>b.datum===today).map((b,i)=>({
-          id:'b'+i+'_loaded', naam:b.naam, firma:b.firma, voor:b.voor,
+        const sheetsVandaag = bevData.filter(b=>b.datum===today).map((b)=>({
+          id:'b_'+b.naam.replace(/\s+/g,'_')+'_'+b.aankomst, naam:b.naam, firma:b.firma, voor:b.voor,
           datum:b.datum, aankomst:b.aankomst, vertrek:b.vertrek||'', fotoUrl:b.fotoUrl||''
         }));
         bezoekers = mergeBezoekers(bezoekers, sheetsVandaag);
@@ -1032,8 +1082,8 @@ function goTo(id){
   g(id).classList.add('active');
   if(id==='s-aanmeld'){resetAan();updateDT();}
   if(id==='s-afmeld'){resetAf();verversBezoekersAchtergrond();}
-  if(id==='s-admin'){const fd=g('adm-fd');if(fd)fd.value=vdg();renderLog();renderMw();laadCleanupSettings();}
-  if(id==='s-welkom'){stopCamera();}
+  if(id==='s-admin'){const fd=g('adm-fd');if(fd)fd.value=vdg();renderLog();renderMw();laadCleanupSettings();toepasRolRechten();}
+  if(id==='s-welkom'){stopCamera();huidigeRol='admin';}
   applyLang();
 }
 
@@ -1258,11 +1308,59 @@ async function doAfmelden(){
 function pinP(d){
   if(pinInput.length>=4)return;
   pinInput+=d;updPin();
-  if(pinInput.length===4){setTimeout(()=>{if(pinInput===pinCode){pinInput='';updPin();goTo('s-admin');}else{g('pin-err').textContent='❌ Onjuiste pincode. Probeer opnieuw.';pinInput='';updPin();}},200);}
+  if(pinInput.length===4){
+    setTimeout(()=>{
+      if(pinInput===pinCode){
+        huidigeRol='admin';
+        pinInput='';updPin();
+        goTo('s-admin');
+      } else if(pinInput===gebruikerCode){
+        huidigeRol='gebruiker';
+        pinInput='';updPin();
+        goTo('s-admin');
+      } else {
+        g('pin-err').textContent='❌ Onjuiste pincode. Probeer opnieuw.';
+        pinInput='';updPin();
+      }
+    },200);
+  }
 }
 function pinBk(){pinInput=pinInput.slice(0,-1);updPin();g('pin-err').textContent='';}
 function pinCl(){pinInput='';updPin();g('pin-err').textContent='';}
 function updPin(){for(let i=0;i<4;i++){const d=g('pd'+i);if(d)d.classList.toggle('filled',i<pinInput.length);}}
+
+// ══════════════════════════════════════
+// ✅ ROLLEN: admin (alles) vs gebruiker (enkel raadplegen)
+// ══════════════════════════════════════
+function toepasRolRechten(){
+  const isAdmin = (huidigeRol === 'admin');
+
+  const titel = g('admin-rol-titel');
+  if(titel) titel.textContent = isAdmin ? '🛡️ Admin' : '👁️ Gebruiker';
+
+  // Instellingen-tab volledig verborgen voor gebruiker
+  const tabInst = g('tab-instellingen');
+  if(tabInst) tabInst.style.display = isAdmin ? 'flex' : 'none';
+  // Als gebruiker per ongeluk op instellingen-tab stond (bv. na her-login als andere rol), terug naar logboek
+  if(!isAdmin){
+    const apInst = g('ap-inst');
+    if(apInst && apInst.classList.contains('active')){
+      switchATab('log', document.querySelector('.atab'));
+    }
+  }
+
+  // Logboek: checkboxes, verwijder-knoppen en prullenbak-iconen verbergen voor gebruiker
+  const chkAllTh = g('chk-all'); if(chkAllTh) chkAllTh.closest('th').style.display = isAdmin ? '' : 'none';
+  document.querySelectorAll('.col-chk').forEach(el=>{ el.style.display = isAdmin ? '' : 'none'; });
+  document.querySelectorAll('.col-act').forEach(el=>{ el.style.display = isAdmin ? '' : 'none'; });
+  const delSelBtn = g('del-sel-btn'); if(delSelBtn) delSelBtn.style.display = isAdmin ? '' : 'none';
+  const delAllBtn = document.querySelector('.del-all-btn'); if(delAllBtn) delAllBtn.style.display = isAdmin ? 'flex' : 'none';
+
+  // Medewerkers: toevoegen mag voor beide rollen, verwijderen enkel voor admin
+  document.querySelectorAll('#mw-list .icon-btn').forEach(el=>{ el.style.display = isAdmin ? 'flex' : 'none'; });
+
+  renderLogTabel(); // herrender zodat kolommen direct kloppen
+}
 
 // ══════════════════════════════════════
 // ADMIN TABS
@@ -1303,20 +1401,22 @@ async function renderLog(){
 }
 
 function renderLogTabel(){
+  const isAdmin = (huidigeRol === 'admin');
   const fd=g('adm-fd'),fz=g('adm-fz');
   const fdv=fd?fd.value:'',fzv=fz?fz.value.toLowerCase().trim():'';
   let rows=logboekData.filter(r=>(!fdv||r.datum===fdv)&&(!fzv||r.naam.toLowerCase().includes(fzv)));
   const tb=g('log-body');if(!tb)return;
-  if(!rows.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;font-size:13px;">Geen resultaten</td></tr>';updateSelUI();return;}
+  const colspan = isAdmin ? 8 : 6;
+  if(!rows.length){tb.innerHTML='<tr><td colspan="'+colspan+'" style="text-align:center;color:#94a3b8;padding:20px;font-size:13px;">Geen resultaten</td></tr>';updateSelUI();return;}
   tb.innerHTML=rows.map(r=>`<tr id="row-${r.id}" class="${selectedIds.has(r.id)?'sel-row':''}">
-    <td class="col-chk"><input type="checkbox" ${selectedIds.has(r.id)?'checked':''} onchange="toggleChk('${r.id}',this)" style="cursor:pointer;width:16px;height:16px;" /></td>
+    ${isAdmin ? `<td class="col-chk"><input type="checkbox" ${selectedIds.has(r.id)?'checked':''} onchange="toggleChk('${r.id}',this)" style="cursor:pointer;width:16px;height:16px;" /></td>` : ''}
     <td class="col-naam" title="${r.naam}"><strong>${r.naam}</strong></td>
     <td class="col-firma" title="${r.firma}">${r.firma}</td>
     <td class="col-voor" title="${r.voor}">${r.voor}</td>
     <td class="col-aan">${r.aankomst}</td>
     <td class="col-ver">${r.vertrek||'—'}</td>
     <td class="col-stat">${r.vertrek?'<span class="badge badge-out">🔴 Weg</span>':'<span class="badge badge-in">🟢 Aanwezig</span>'}</td>
-    <td class="col-act">${r.fotoUrl?`<a href="${r.fotoUrl}" target="_blank" title="Foto bekijken">📷</a>`:''} <button class="icon-btn" onclick="confirmDelOne('${r.id}')" title="Verwijder">🗑️</button></td>
+    ${isAdmin ? `<td class="col-act">${r.fotoUrl?`<a href="${r.fotoUrl}" target="_blank" title="Foto bekijken">📷</a>`:''} <button class="icon-btn" onclick="confirmDelOne('${r.id}')" title="Verwijder">🗑️</button></td>` : (r.fotoUrl ? `<td class="col-act"><a href="${r.fotoUrl}" target="_blank" title="Foto bekijken">📷</a></td>` : '<td class="col-act"></td>')}
   </tr>`).join('');
   updateSelUI();
 }
@@ -1347,27 +1447,55 @@ function showConfirm(msg,sub,action){
   g('confirm-ok').onclick=()=>{closeConfirm();action();};
 }
 function closeConfirm(){g('confirm-overlay').classList.remove('active');}
+// ✅ Stuurt een verwijder-aanroep en wacht op een ECHTE bevestiging (geen no-cors blind-fire)
+async function sheetsVerwijderBezoeker(v){
+  if(!isOnline()){
+    voegToeAanQueue({type:'verwijderBezoeker', naam:v.naam, datum:v.datum, aankomst:v.aankomst, firma:v.firma});
+    return false;
+  }
+  try {
+    const res = await fetch(SHEETS_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({type:'verwijderBezoeker', naam:v.naam, datum:v.datum, aankomst:v.aankomst, firma:v.firma})
+    });
+    const text = await res.text();
+    const json = JSON.parse(text);
+    if(json.status === 'ok' && json.data && json.data.verwijderd === true) return true;
+    console.warn('[Verwijderen] Sheets vond de rij niet:', v.naam, v.aankomst, json);
+    return false;
+  } catch(e){
+    console.error('[Verwijderen] fout:', e);
+    voegToeAanQueue({type:'verwijderBezoeker', naam:v.naam, datum:v.datum, aankomst:v.aankomst, firma:v.firma});
+    return false;
+  }
+}
+
 function confirmDelOne(id){
   const v=logboekData.find(b=>b.id===id);
   showConfirm('Rij verwijderen?',v?v.naam+' — '+v.aankomst:'',async ()=>{
     logboekData=logboekData.filter(b=>b.id!==id);
-    bezoekers=bezoekers.filter(b=>!(v && b.naam===v.naam && b.aankomst===v.aankomst));
+    bezoekers=bezoekers.filter(b=>!(v && b.naam===v.naam && b.aankomst===v.aankomst && b.datum===v.datum));
+    alleHistorieBezoekers=alleHistorieBezoekers.filter(b=>!(v && b.naam===v.naam && b.aankomst===v.aankomst && b.datum===v.datum));
     selectedIds.delete(id);
     slaLokaalmOp();
     renderLogTabel();
-    if(v) await sheetsPost({type:'verwijderBezoeker', naam:v.naam, datum:v.datum, aankomst:v.aankomst});
+    if(v) await sheetsVerwijderBezoeker(v);
   });
 }
 function confirmDelSel(){
   const teVerwijderen = logboekData.filter(b=>selectedIds.has(b.id));
   showConfirm(selectedIds.size+' rij'+(selectedIds.size>1?'en':'')+' verwijderen?','',async ()=>{
     logboekData=logboekData.filter(b=>!selectedIds.has(b.id));
-    teVerwijderen.forEach(v=>{ bezoekers=bezoekers.filter(b=>!(b.naam===v.naam && b.aankomst===v.aankomst)); });
+    teVerwijderen.forEach(v=>{
+      bezoekers=bezoekers.filter(b=>!(b.naam===v.naam && b.aankomst===v.aankomst && b.datum===v.datum));
+      alleHistorieBezoekers=alleHistorieBezoekers.filter(b=>!(b.naam===v.naam && b.aankomst===v.aankomst && b.datum===v.datum));
+    });
     selectedIds.clear();
     const ca=g('chk-all');if(ca)ca.checked=false;
     slaLokaalmOp();
     renderLogTabel();
-    for(const v of teVerwijderen){ await sheetsPost({type:'verwijderBezoeker', naam:v.naam, datum:v.datum, aankomst:v.aankomst}); }
+    for(const v of teVerwijderen){ await sheetsVerwijderBezoeker(v); }
   });
 }
 function confirmDelAll(){
@@ -1397,6 +1525,7 @@ function renderMw(){
     list.innerHTML='<p style="font-size:13px;color:#94a3b8;padding:8px 0;">Nog geen medewerkers toegevoegd.</p>';
     return;
   }
+  const isAdmin = (huidigeRol === 'admin');
   list.innerHTML=mws.map(m=>`
     <div class="mw-card" id="mwcard-${m.id}">
       <div class="mw-info">
@@ -1405,7 +1534,7 @@ function renderMw(){
         <p class="mw-det">✉️ ${m.email}</p>
         ${m.cc?`<p class="mw-det">CC: ${m.cc}</p>`:''}
       </div>
-      <button class="icon-btn" onclick="delMw('${m.id}')" title="Verwijder">🗑️</button>
+      ${isAdmin ? `<button class="icon-btn" onclick="delMw('${m.id}')" title="Verwijder">🗑️</button>` : ''}
     </div>`).join('');
 }
 
@@ -1432,10 +1561,22 @@ function delMw(id){
 function savePin(){
   const v=g('pin-new').value.trim();
   if(v.length===4&&/^\d{4}$/.test(v)){
-    pinCode=v;s('pin-save-msg','✅ Pincode opgeslagen');
+    if(v===gebruikerCode){ s('pin-save-msg','⚠️ Mag niet gelijk zijn aan de gebruiker-pincode'); return; }
+    pinCode=v;s('pin-save-msg','✅ Admin-pincode opgeslagen');
     g('pin-new').value='';setTimeout(()=>s('pin-save-msg',''),3000);
     slaLokaalmOp();
-    sheetsSavePin(v);
+    sheetsSavePin();
+  }
+}
+
+function saveGebruikerPin(){
+  const v=g('gebruiker-pin-new').value.trim();
+  if(v.length===4&&/^\d{4}$/.test(v)){
+    if(v===pinCode){ s('gebruiker-pin-save-msg','⚠️ Mag niet gelijk zijn aan de admin-pincode'); return; }
+    gebruikerCode=v;s('gebruiker-pin-save-msg','✅ Gebruiker-pincode opgeslagen');
+    g('gebruiker-pin-new').value='';setTimeout(()=>s('gebruiker-pin-save-msg',''),3000);
+    slaLokaalmOp();
+    sheetsSavePin();
   }
 }
 
