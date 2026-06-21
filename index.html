@@ -304,8 +304,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
     <div class="apanel active" id="ap-log">
       <div class="filter-row">
-        <input type="date" id="adm-fd" onchange="renderLog()" style="flex:none;width:140px;" />
-        <input type="text" id="adm-fz" placeholder="Zoek naam..." oninput="renderLog()" style="flex:1;min-width:80px;" />
+        <input type="date" id="adm-fd" onchange="renderLogTabel()" style="flex:none;width:140px;" />
+        <input type="text" id="adm-fz" placeholder="Zoek naam..." oninput="renderLogTabel()" style="flex:1;min-width:80px;" />
         <button class="export-btn" onclick="exportCSV()">⬇️ Export</button>
       </div>
       <div class="filter-row">
@@ -549,7 +549,16 @@ async function verwerkQueue(){
         if(json.status === 'ok' && json.data && json.data.fotoUrl){
           const bez = bezoekers.find(b => b.id === item.bezoekerId);
           if(bez) bez.fotoUrl = json.data.fotoUrl;
+          const logItem = logboekData.find(b => b.naam === item.naam && b.datum === item.datum);
+          if(logItem) logItem.fotoUrl = json.data.fotoUrl;
           slaLokaalmOp();
+          // ✅ FIX: koppel de fotoUrl ook terug aan de al bestaande Sheets-rij
+          // (die rij is mogelijk al zonder foto aangemaakt toen de aanmelding zelf gesynchroniseerd werd)
+          await fetch(SHEETS_URL, {
+            method:'POST', mode:'no-cors',
+            headers:{'Content-Type':'text/plain;charset=utf-8'},
+            body: JSON.stringify({type:'koppelFotoAanRij', naam:item.naam, datum:item.datum, fotoUrl:json.data.fotoUrl})
+          });
           syncQueue = syncQueue.filter(q => q.id !== item.id);
         } else {
           throw new Error('Geen fotoUrl in respons');
@@ -1267,10 +1276,36 @@ function switchATab(p,el){
 // ══════════════════════════════════════
 // LOGBOEK
 // ══════════════════════════════════════
-function renderLog(){
+let logboekData = []; // volledige historie voor het admin-logboek (alle dagen, uit Sheets + lokaal vangnet)
+
+async function renderLog(){
+  const tb=g('log-body');
+  if(tb) tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;font-size:13px;">⏳ Laden...</td></tr>';
+
+  // ✅ Altijd de volledige historie ophalen uit Sheets (niet enkel 'vandaag' uit lokaal geheugen)
+  if(isOnline()){
+    const bevData = await sheetsGet('getBezoekers');
+    if(bevData){
+      logboekData = bevData.map((b,i)=>({
+        id:'log'+i, naam:b.naam, firma:b.firma, voor:b.voor,
+        datum:b.datum, aankomst:b.aankomst, vertrek:b.vertrek||'', fotoUrl:b.fotoUrl||''
+      }));
+    } else if(!logboekData.length){
+      // Sheets gaf niets terug en we hebben nog geen logboekData — val terug op lokale historie
+      logboekData = alleHistorieBezoekers;
+    }
+  } else if(!logboekData.length){
+    // Offline en nog geen logboekData geladen — toon wat lokaal bekend is
+    logboekData = alleHistorieBezoekers;
+  }
+
+  renderLogTabel();
+}
+
+function renderLogTabel(){
   const fd=g('adm-fd'),fz=g('adm-fz');
   const fdv=fd?fd.value:'',fzv=fz?fz.value.toLowerCase().trim():'';
-  let rows=bezoekers.filter(r=>(!fdv||r.datum===fdv)&&(!fzv||r.naam.toLowerCase().includes(fzv)));
+  let rows=logboekData.filter(r=>(!fdv||r.datum===fdv)&&(!fzv||r.naam.toLowerCase().includes(fzv)));
   const tb=g('log-body');if(!tb)return;
   if(!rows.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;font-size:13px;">Geen resultaten</td></tr>';updateSelUI();return;}
   tb.innerHTML=rows.map(r=>`<tr id="row-${r.id}" class="${selectedIds.has(r.id)?'sel-row':''}">
@@ -1313,17 +1348,40 @@ function showConfirm(msg,sub,action){
 }
 function closeConfirm(){g('confirm-overlay').classList.remove('active');}
 function confirmDelOne(id){
-  const v=bezoekers.find(b=>b.id===id);
-  showConfirm('Rij verwijderen?',v?v.naam+' — '+v.aankomst:'',()=>{bezoekers=bezoekers.filter(b=>b.id!==id);selectedIds.delete(id);slaLokaalmOp();renderLog();});
+  const v=logboekData.find(b=>b.id===id);
+  showConfirm('Rij verwijderen?',v?v.naam+' — '+v.aankomst:'',async ()=>{
+    logboekData=logboekData.filter(b=>b.id!==id);
+    bezoekers=bezoekers.filter(b=>!(v && b.naam===v.naam && b.aankomst===v.aankomst));
+    selectedIds.delete(id);
+    slaLokaalmOp();
+    renderLogTabel();
+    if(v) await sheetsPost({type:'verwijderBezoeker', naam:v.naam, datum:v.datum, aankomst:v.aankomst});
+  });
 }
 function confirmDelSel(){
-  showConfirm(selectedIds.size+' rij'+(selectedIds.size>1?'en':'')+' verwijderen?','',()=>{bezoekers=bezoekers.filter(b=>!selectedIds.has(b.id));selectedIds.clear();const ca=g('chk-all');if(ca)ca.checked=false;slaLokaalmOp();renderLog();});
+  const teVerwijderen = logboekData.filter(b=>selectedIds.has(b.id));
+  showConfirm(selectedIds.size+' rij'+(selectedIds.size>1?'en':'')+' verwijderen?','',async ()=>{
+    logboekData=logboekData.filter(b=>!selectedIds.has(b.id));
+    teVerwijderen.forEach(v=>{ bezoekers=bezoekers.filter(b=>!(b.naam===v.naam && b.aankomst===v.aankomst)); });
+    selectedIds.clear();
+    const ca=g('chk-all');if(ca)ca.checked=false;
+    slaLokaalmOp();
+    renderLogTabel();
+    for(const v of teVerwijderen){ await sheetsPost({type:'verwijderBezoeker', naam:v.naam, datum:v.datum, aankomst:v.aankomst}); }
+  });
 }
 function confirmDelAll(){
-  showConfirm('Alle rijen verwijderen?','Het volledige logboek wordt gewist.',()=>{bezoekers=[];selectedIds.clear();const ca=g('chk-all');if(ca)ca.checked=false;slaLokaalmOp();renderLog();});
+  showConfirm('Alle rijen verwijderen?','Het volledige logboek wordt gewist (ook in de Sheet).',async ()=>{
+    logboekData=[];bezoekers=[];alleHistorieBezoekers=[];
+    selectedIds.clear();
+    const ca=g('chk-all');if(ca)ca.checked=false;
+    slaLokaalmOp();
+    renderLogTabel();
+    await sheetsPost({type:'verwijderAlleBezoekers'});
+  });
 }
 function exportCSV(){
-  const rows=[['Naam','Firma','Voor wie','Datum','Aankomst','Vertrek','Foto'],...bezoekers.map(r=>[r.naam,r.firma,r.voor,r.datum,r.aankomst,r.vertrek||'',r.fotoUrl||''])];
+  const rows=[['Naam','Firma','Voor wie','Datum','Aankomst','Vertrek','Foto'],...logboekData.map(r=>[r.naam,r.firma,r.voor,r.datum,r.aankomst,r.vertrek||'',r.fotoUrl||''])];
   const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
