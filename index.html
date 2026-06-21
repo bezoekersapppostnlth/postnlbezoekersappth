@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>PostNL Pharma and Care — Bezoekersregistratie</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<script>emailjs.init('oAicUsqD8wWpdIgQE');</script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.app { width: 100%; max-width: 520px; margin: 0 auto; padding: 12px; }
+.screen { display: none; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; flex-direction: column; min-height: 640px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+.screen.active { display: flex; }
+.top-bar { background: #FF6200; padding: 14px 16px 12px; display: flex; flex-direction: column; align-items: center; gap: 7px; }
+.top-row { display: flex; align-items: center; width: 100%; justify-content: space-between; }
+.back-btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; color: white; padding: 6px 12px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+.back-btn:hover { background: rgba(255,255,255,0.3); }
+.lang-row { display: flex; gap: 5px; }
+.lang-btn { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.5); border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 500; cursor: pointer; }
+.lang-btn.active { background: white; color: #FF6200; border-color: white; }
+.screen-title { font-size: 18px; font-weight: 600; color: white; }
+.logo-box { background: white; border-radius: 12px; padding: 10px 24px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; user-select: none; }
+.logo-box:hover { opacity: 0.95; }
+.logo-text { font-size: 22px; font-weight: 700; color: #FF6200; letter-spacing: 1px; }
+.logo-sub { font-size: 10px; color: #FF6200; letter-spacing: 0.5px; font-weight: 500; }
+.logo-hint { font-size: 9px; color: rgba(255,103,0,0.6); min-height: 12px; margin-top: 1px; }
+.welcome-title { font-size: 15px; color: white; font-weight: 500; text-align: center; }
+.datetime-bar { background: #e55800; padding: 9px 16px; display: flex; justify-content: center; gap: 28px; }
+.dt-item { display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.95); font-size: 14px; font-weight: 500; }
+.body { flex: 1; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 13px; color: #64748b; font-weight: 600; }
+.field input, .field select {
+  height: 46px; border-radius: 10px; border: 2px solid #e2e8f0;
+  background: #ffffff; padding: 0 14px; font-size: 15px; color: #1e293b; width: 100%; outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.field input:focus, .field select:focus { border-color: #FF6200; box-shadow: 0 0 0 3px rgba(255,98,0,0.12); }
+.field input[readonly] { background: #f8fafc; border-color: #e2e8f0; color: #94a3b8; cursor: default; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.auto-tag { font-size: 11px; color: #16a34a; background: #dcfce7; border-radius: 6px; padding: 2px 8px; display: inline-flex; align-items: center; gap: 3px; margin-top: 3px; width: fit-content; font-weight: 500; }
+.divider { height: 1px; background: #f1f5f9; margin: 2px 0; }
+.btn-primary { background: #FF6200; color: white; border: none; border-radius: 12px; height: 52px; font-size: 17px; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 4px; transition: background 0.15s; }
+.btn-primary:hover { background: #e55800; }
+.btn-primary:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
+.footer { padding: 14px; text-align: center; border-top: 1px solid #f1f5f9; }
+.footer-text { font-size: 12px; color: #94a3b8; }
+.btn-big { width: 100%; border-radius: 16px; height: 90px; display: flex; align-items: center; justify-content: center; gap: 16px; font-size: 20px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.15s; }
+.btn-big:hover { opacity: 0.92; }
+.btn-big-p { background: #FF6200; color: white; }
+.btn-big-s { background: #f8fafc; color: #1e293b; border: 2px solid #e2e8f0 !important; }
+.btn-big svg, .btn-big i { font-size: 28px; }
+.err-box { display:none; font-size:13px; color: #dc2626; background: #fef2f2; border-radius: 10px; padding: 10px 14px; border: 1px solid #fecaca; font-weight: 500; }
+.bev-wrap { display:none; flex-direction:column; align-items:center; gap:14px; text-align:center; padding: 20px 18px; }
+.bev-wrap.active { display: flex; }
+.bev-icon { width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+.bev-box { background:#f8fafc; border-radius:12px; padding:12px 16px; width:100%; text-align:left; border: 1px solid #e2e8f0; }
+.visitor-card { background:#f8fafc; border-radius:12px; border: 2px solid #e2e8f0; padding:14px 16px; display:flex; flex-direction:column; gap:6px; cursor:pointer; margin-bottom:10px; transition: border-color 0.15s; }
+.visitor-card:hover { border-color: #FF6200; }
+.visitor-card .vname { font-size:16px; font-weight:600; color:#1e293b; }
+.visitor-card .vdet { font-size:13px; color:#64748b; display:flex; align-items:center; gap:6px; }
+.selected-card { border:2px solid #FF6200 !important; background: rgba(255,98,0,0.04); }
+.no-results { text-align:center; padding:24px 0; color:#94a3b8; font-size:14px; }
+.admin-tabs { display:flex; border-bottom:1px solid #f1f5f9; }
+.atab { flex:1; padding:12px 8px; font-size:13px; font-weight:600; text-align:center; color:#94a3b8; border-bottom:2px solid transparent; cursor:pointer; background:none; border-top:none; border-left:none; border-right:none; display:flex; align-items:center; justify-content:center; gap:5px; transition: color 0.15s; }
+.atab.active { color:#FF6200; border-bottom:2px solid #FF6200; }
+.apanel { display:none; flex-direction:column; gap:12px; }
+.apanel.active { display:flex; }
+.filter-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.filter-row input[type=date], .filter-row input[type=text] { height:36px; border-radius:8px; border:2px solid #e2e8f0; background:#f8fafc; padding:0 10px; font-size:13px; color:#1e293b; outline:none; }
+.filter-row input:focus { border-color:#FF6200; }
+.export-btn { background:#FF6200; color:white; border:none; border-radius:8px; height:36px; padding:0 12px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:4px; }
+.del-sel-btn { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; border-radius:8px; height:36px; padding:0 10px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; display:none; align-items:center; gap:4px; }
+.del-all-btn { background:#f8fafc; color:#dc2626; border:2px solid #e2e8f0; border-radius:8px; height:36px; padding:0 10px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:4px; }
+.sel-count-lbl { font-size:12px; color:#64748b; display:none; align-items:center; font-weight:500; }
+.log-wrap { width:100%; overflow-x:auto; }
+.log-table { width:100%; border-collapse:collapse; font-size:12px; table-layout:fixed; min-width:480px; }
+.log-table th { background:#f8fafc; padding:8px 6px; text-align:left; color:#64748b; font-weight:600; border-bottom:2px solid #e2e8f0; white-space:nowrap; }
+.log-table td { padding:8px 6px; border-bottom:1px solid #f1f5f9; color:#1e293b; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.log-table tr:hover td { background:#f8fafc; }
+.log-table tr.sel-row td { background:#fef2f2; }
+.col-chk{width:28px;} .col-naam{width:22%;} .col-firma{width:16%;} .col-voor{width:18%;} .col-aan{width:10%;} .col-ver{width:10%;} .col-stat{width:15%;} .col-act{width:32px;}
+.badge { display:inline-flex; align-items:center; gap:3px; border-radius:20px; padding:3px 8px; font-size:11px; font-weight:600; }
+.badge-in { background:#dcfce7; color:#16a34a; }
+.badge-out { background:#fee2e2; color:#dc2626; }
+.mw-card { background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; }
+.mw-info { display:flex; flex-direction:column; gap:3px; flex:1; }
+.mw-name { font-size:14px; font-weight:600; color:#1e293b; }
+.mw-det { font-size:12px; color:#64748b; }
+.icon-btn { background:none; border:1.5px solid #e2e8f0; border-radius:8px; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#dc2626; flex-shrink:0; transition: background 0.15s; }
+.icon-btn:hover { background:#fef2f2; border-color:#fecaca; }
+.add-form-box { background:#f8fafc; border-radius:10px; border:2px solid #FF6200; padding:14px; display:flex; flex-direction:column; gap:10px; margin-bottom:8px; }
+.add-form-box input { height:40px; border-radius:8px; border:2px solid #e2e8f0; background:#ffffff; padding:0 12px; font-size:13px; color:#1e293b; width:100%; outline:none; }
+.add-form-box input:focus { border-color:#FF6200; }
+.aform-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.btn-save { background:#FF6200; color:white; border:none; border-radius:8px; height:40px; font-size:13px; font-weight:600; width:100%; cursor:pointer; }
+.btn-save:hover { background:#e55800; }
+.btn-csm { background:#ffffff; color:#64748b; border:1.5px solid #e2e8f0; border-radius:8px; height:40px; font-size:13px; font-weight:500; width:100%; cursor:pointer; }
+.add-btn { background:#f8fafc; border:2px dashed #e2e8f0; border-radius:10px; height:44px; font-size:13px; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; width:100%; font-weight:500; }
+.add-btn:hover { border-color:#FF6200; color:#FF6200; }
+.slabel { font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; }
+.pin-wrap { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; gap:20px; padding:28px 20px; }
+.pin-dots { display:flex; gap:14px; }
+.pin-dot { width:16px; height:16px; border-radius:50%; border:2px solid #e2e8f0; background:transparent; transition:background 0.15s; }
+.pin-dot.filled { background:#FF6200; border-color:#FF6200; }
+.pin-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; width:240px; }
+.pin-btn { height:60px; border-radius:12px; border:2px solid #e2e8f0; background:#f8fafc; font-size:22px; font-weight:500; color:#1e293b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition: background 0.1s; }
+.pin-btn:hover { background:#e2e8f0; }
+.pin-btn:active { background:#FF6200; color:white; }
+.logout-btn { background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4); border-radius:8px; color:white; padding:6px 12px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:4px; font-weight:500; }
+.confirm-overlay { display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; }
+.confirm-overlay.active { display:flex; }
+.confirm-box { background:#ffffff; border-radius:20px; padding:28px 24px; width:300px; display:flex; flex-direction:column; gap:14px; text-align:center; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+.confirm-btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.sending-overlay { display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(255,255,255,0.85); z-index:500; align-items:center; justify-content:center; flex-direction:column; gap:14px; }
+.sending-overlay.active { display:flex; }
+.spinner { width:40px; height:40px; border:4px solid #FF6200; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div style="font-size:40px;">🗑️</div>
+    <p style="font-size:16px;font-weight:600;color:#1e293b;" id="confirm-msg">Weet u het zeker?</p>
+    <p style="font-size:13px;color:#64748b;" id="confirm-sub"></p>
+    <div class="confirm-btns">
+      <button class="btn-csm" onclick="closeConfirm()">Annuleren</button>
+      <button class="btn-save" style="background:#dc2626;" id="confirm-ok">Verwijderen</button>
+    </div>
+  </div>
+</div>
+
+<div class="sending-overlay" id="sending-overlay">
+  <div class="spinner"></div>
+  <p style="font-size:14px;color:#64748b;font-weight:500;" id="sending-msg">Bezig met versturen...</p>
+</div>
+
+<!-- WELKOMST -->
+<div class="screen active" id="s-welkom">
+  <div class="top-bar">
+    <div class="top-row">
+      <div style="width:60px;"></div>
+      <div class="lang-row">
+        <button class="lang-btn active" onclick="setLang('nl',this)">NL</button>
+        <button class="lang-btn" onclick="setLang('en',this)">EN</button>
+        <button class="lang-btn" onclick="setLang('fr',this)">FR</button>
+      </div>
+    </div>
+    <div class="logo-box" onclick="logoClick()">
+<img src="data:image/png;base64, /9j/4AAQSkZJRgABAQEAYABgAAD/4QC8RXhpZgAASUkqAAgAAAAGABIBAwABAAAAAQAAABoBBQABAAAAVgAAABsBBQABAAAAXgAAACgBAwABAAAAAgAAABMCAwABAAAAAQAAAGmHBAABAAAAZgAAAAAAAABgAAAAAQAAAGAAAAABAAAABgAAkAcABAAAADAyMTABkQcABAAAAAECAwAAoAcABAAAADAxMDABoAMAAQAAAP//AAACoAMAAQAAAG4IAAADoAMAAQAAAB0BAAAAAAAA/+EPEGh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8APD94cGFja2V0IGJlZ2luPSfvu78nIGlkPSdXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQnPz4KPHg6eG1wbWV0YSB4bWxuczp4PSdhZG9iZTpuczptZXRhLyc+CjxyZGY6UkRGIHhtbG5zOnJkZj0naHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyc+CgogPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9JycKICB4bWxuczpBdHRyaWI9J2h0dHA6Ly9ucy5hdHRyaWJ1dGlvbi5jb20vYWRzLzEuMC8nPgogIDxBdHRyaWI6QWRzPgogICA8cmRmOlNlcT4KICAgIDxyZGY6bGkgcmRmOnBhcnNlVHlwZT0nUmVzb3VyY2UnPgogICAgIDxBdHRyaWI6Q3JlYXRlZD4yMDI2LTA2LTE2PC9BdHRyaWI6Q3JlYXRlZD4KICAgICA8QXR0cmliOkRhdGE+eyZxdW90O2RvYyZxdW90OzomcXVvdDtEQUhNdUtJUnNpTSZxdW90OywmcXVvdDt1c2VyJnF1b3Q7OiZxdW90O1VBR0JqTFJCYUhZJnF1b3Q7LCZxdW90O2JyYW5kJnF1b3Q7OiZxdW90O0JBQi0tUWFYOTRzJnF1b3Q7LCZxdW90O3RlbXBsYXRlJnF1b3Q7OiZxdW90O2hlYWRlciZxdW90O308L0F0dHJpYjpEYXRhPgogICAgIDxBdHRyaWI6RXh0SWQ+YzhhYTY5ODAtNmIwYi00NTg5LWJkYWYtODVhZjI1OTE0YjhhPC9BdHRyaWI6RXh0SWQ+CiAgICAgPEF0dHJpYjpGYklkPjUyNTI2NTkxNDE3OTU4MDwvQXR0cmliOkZiSWQ+CiAgICAgPEF0dHJpYjpUb3VjaFR5cGU+MjwvQXR0cmliOlRvdWNoVHlwZT4KICAgIDwvcmRmOmxpPgogICA8L3JkZjpTZXE+CiAgPC9BdHRyaWI6QWRzPgogPC9yZGY6RGVzY3JpcHRpb24+CgogPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9JycKICB4bWxuczpkYz0naHR0cDovL3B1cmwub3JnL2RjL2VsZW1lbnRzLzEuMS8nPgogIDxkYzp0aXRsZT4KICAgPHJkZjpBbHQ+CiAgICA8cmRmOmxpIHhtbDpsYW5nPSd4LWRlZmF1bHQnPkNvcHkgb2YgaGVhZGVyIC0gMTwvcmRmOmxpPgogICA8L3JkZjpBbHQ+CiAgPC9kYzp0aXRsZT4KIDwvcmRmOkRlc2NyaXB0aW9uPgoKIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PScnCiAgeG1sbnM6cGRmPSdodHRwOi8vbnMuYWRvYmUuY29tL3BkZi8xLjMvJz4KICA8cGRmOkF1dGhvcj5Mb3JlbmEgQXVndXN0byBSZXplbmRlPC9wZGY6QXV0aG9yPgogPC9yZGY6RGVzY3JpcHRpb24+CgogPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9JycKICB4bWxuczp4bXA9J2h0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8nPgogIDx4bXA6Q3JlYXRvclRvb2w+Q2FudmEgKFJlbmRlcmVyKSBkb2M9REFITXVLSVJzaU0gdXNlcj1VQUdCakxSQmFIWSBicmFuZD1CQUItLVFhWDk0cyB0ZW1wbGF0ZT1oZWFkZXI8L3htcDpDcmVhdG9yVG9vbD4KIDwvcmRmOkRlc2NyaXB0aW9uPgo8L3JkZjpSREY+CjwveDp4bXBtZXRhPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAo8P3hwYWNrZXQgZW5kPSd3Jz8+/9sAQwAGBAUGBQQGBgUGBwcGCAoQCgoJCQoUDg8MEBcUGBgXFBYWGh0lHxobIxwWFiAsICMmJykqKRkfLTAtKDAlKCko/9sAQwEHBwcKCAoTCgoTKBoWGigoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgo/8AAEQgBHQhuAwEiAAIRAQMRAf/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC//EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v/EAB8BAAMBAQEBAQEBAQEAAAAAAAABAgMEBQYHCAkKC//EALURAAIBAgQEAwQHBQQEAAECdwABAgMRBAUhMQYSQVEHYXETIjKBCBRCkaGxwQkjM1LwFWJy0QoWJDThJfEXGBkaJicoKSo1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoKDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz9PX29/j5+v/aAAwDAQACEQMRAD8A+qaKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiig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9D0T4XeGl07T11S7T/TLlcoCP9XGen4nr9Me9d3QAAMDgUV9RhcNDC0lShsv6ufK4vEzxVV1Z7v8PIKKKK6DnCiiigAooooAwtX8J6LqoY3NjEsh/wCWsI8ts+uR1/HNcLrfwvuIt0mj3azr/wA8p/lb8GHB/SvV6K8/E5XhcT8cNe60f9ep6GGzXFYb4J6dnqv69D5t1TSr/SpfL1C0lt27b14P0PQ/hWnoXjDWdG2rBdGWAf8ALGf51/DuPwIr3ueGK4iaK4iSWJuGR1DA/UGuK174b6ZehpNNZrGc87R80Z/A8j8D+FeDVyLEYaXtMHP9H/k/wPfpZ9h8TH2eMh+q/wA1+IeH/iPpl+Vi1JTYTnjcx3Rn/gXb8fzrt4pEmjWSJ1eNhlWU5BHsa+f9f8KatoZZru2LwD/lvF8yfie344qrouvanosm7TruSJc5MZ5Rvqp4p0M9r4eXs8ZD57P7tn+AV8goYmPtcFP5br791+J9GUV5/wCG/iTZ3eyHWYxZzHjzVyYyf5r+o9672GWOeJZYZEkjYZV0OQR7EV9JhsZRxUealK/5/cfNYrB1sLLlrRt+X3j6KKK6TlCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKK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/hv4zNs8Wk6tL/o5+WCZj/qz2Un09PT6dPWK+nwONp42l7SHzXY+Xx2BqYKr7Op8n3Ciiiuw4gooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigBk8gigkkPRFLH8BXzGzFmLMcknJr6P8QyeToGpyf3LaVvyQ184AZOB1r5HieV5U4+v6H2HC8bRqS9P1Po7w5D9n8P6ZF3S2jU/XaK0aZCgihjjHRVC/lT6+rpx5IqPY+SqS55uXcKKKKsgKKKKAOK+Ir+HYGspPEFrcTysGWLyDg4GM5+YDHIqjZ/EXw/Z2UVpBZ6kIIkEaqUQ/KBjGS9dB4v8ACkHiY2pnuJYDb7gNgBzux6/Suc/4VXZf9BK5/wC+FrwMVTx8cRKeGhGztrpd6dT6DC1Mvlh4wxU5XV9NbLXoZejeJPBujXv2uw03U0n2lQxw2AevBerOveMfCuvLCupWGpyCEkptCrjOM9H9hVv/AIVXZf8AQSuf++Fo/wCFV2X/AEErn/vha5FQzNQdJU48r6WVjseIyt1FVdSfMut5XOz8MLYDQbM6RGY7Fk3Rqc5GTk5z3zmtOqWjaemlaXbWMTs6QJsDN1NX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giiijVkWMHOSe5Jrzj4hf8jlqn/XQf8AoIrqzzEwxWDhVp7OX6M5Miw1TC42dKpuo/qj1L4W/wDIl2f+/J/6Gad8T/8AkSb/AOsf/oxab8Lf+RLs/wDfk/8AQzTvif8A8iTf/WP/ANGLXpL/AJFX/bn/ALaea/8Aka/9xP8A248p8A/8jjpf/XX+hr0T4yf8ixa/9fi/+gPXnfgH/kcdL/66/wBDXonxk/5Fi1/6/F/9AevEy/8A5Fdf1/RHuZh/yNaHp+rON+E3/I3x/wDXF/5V7dXiPwm/5G+P/ri/8q9ur1eHf90fq/0PJ4k/3tei/UK434r3y2vhOSDI8y6kWMDvgHcT+mPxrsq8L+I+vDW9dK27brO1zFGQeGOfmb8T+gFb51ilh8LJdZaL9fwMMkwjxGKjLpHV/p+Jn+CLRr3xZpcSjO2dZT9E+Y/yr6ErzD4O6MQLnV5k6/uYM9/7x/kPzr0+seH8O6WF55byd/l0NuIcSq2K5I7RVvn1CiiivdPBCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAp61H5uj38f9+CRfzU18119PuodGVuQRg18xzRmKV426oxU/hX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AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK8o+NNptvtNvAP9ZG0RP+6cj/0I16vXGfFmx+1eFGnUZa1lWT8D8p/9CB/CvMzij7XBzS6a/dqepk1b2WMg310+/Q5H4OXYi166tWOBPBke7Kf8Ca9hr548HX39m+J9OuScIJQjn0VvlP6GvoeuLh2tz4Z0/wCV/nr/AJnbxJR5MUqn8y/LT/IKKKK+gPngooooAKKKKACiiigAooooAKKKKACiiigAooooAKralf2um2j3N9OkMCdWY/oPU+wrmPFfjvT9G3wWhW8vhxsQ/Ih/2m/oP0ryLXdbv9cuvP1GcyEfdQcIg9AO3868TMM7o4W8KfvS/Bev+R7mXZHWxVp1Pdh+L9P8zpPGfju51jfaabvtrA8Mejyj39B7fn6Vz3hzQL7X7zyLGP5R/rJW4SMe5/p1ro/CHgC71UpdapvtLI8hSMSSD2HYe5/LvXr2m2FrptolrYwpDAnRVH6n1PvXlYbLMRmVT6xjG1H8fl2X9eZ62KzPDZbT+r4NJy/Bevd/15GZ4V8M2Ph212Wy+ZcMP3k7D5n9vYe1blFFfWUqUKMFCmrJHyNWrOtNzqO7YUUUVoZhRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAVV1azXUNMu7N8bZ4mjz6ZGM1aopSipJxezKjJxakt0fMUsbxSvHIpV0JVgexFfRPhbUf7V8P2N4Tl5Ihv8A98cN+oNeP/E3S/7O8VTui4hux56/U/e/UE/jXUfBvVd0N5pUjcofPiB9Dww/PB/E18dk8ng8dPDT66fNbfgfZZzBY3AwxMOmvye/4/kemUUUV9kfFhRRRQAUUUUAFFFFABRRRQAUUUUAFFZmt69puiQ79RuUjYjKxjl2+ijn8eleZeIviTfXm6HR4/scB48xsNIR/Jf1+tefjMzw+E0qS17Lf+vU9DB5XiMZrTjp3e3/AAfkek6/4i03Qot1/cASEZWFPmdvoP6nivJ/FHj3UdY3wWhNlZHjah+dx/tN/QfrXLIl1qN5tQTXV1Ke2Xdj/M16J4Y+Gkkmy419/LXqLaJvmP8AvN2+g/MV87Ux2NzWTp4dcsf63f6L8T6SngcDlMVUxD5pf1sv1f4HB6No1/rNyINOt3lb+JuioPUnoK9e8I+A7LRtlze7by/HIYj5Iz/sg9/c/pXVWFlbafbLb2UEcEK9EQYH1+vvVivXy/I6OFtOp70vwXp/meRmGe1sVeFP3Y/i/X/IKKKK9s8IKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAOM+KmjHUvD32qJcz2RMgx1KH7w/kfwryPw/qkujaxa30OSYnyy/3l6EfiM19HModSrAMpGCCMgivA/HPh5/D+tPGin7HNl4G9u6/UdPy9a+Tz/Cyp1I4yl5X9Vsz63h/Fxq05YKr529Huv1+893srqK9tIbm2cPDKgdGHcGpq8f+Gfi1dMcaXqUm2zkbMMjHiJj1B9FP6H617AORkV72X46GNoqcd+q7P8ArY8DMMDPBVnTlt0fdf1uFFFFdxwhRRRQAUUVkar4k0jStwvb+BHHWNTuf/vkZNRUqQprmm0l5l06c6r5YJt+Rr0V5pq/xShTcmk2LSHtJcHaP++RyfzFcPrfizWNYBW7vHWE/wDLGL5E/EDr+Oa8bE5/haWkPeflt9//AA57WG4fxVbWfurz3+7/ADsew634z0XSNyy3QnnH/LKD52/E9B+JrzvXviRqd8Gj01FsYTxuB3SH8eg/AfjXLaTouo6vJs06zln5wWAwo+rHgV3+g/DDlZdbuvfyLf8Aqx/oPxrynjMyzLSiuWPlp+P+R6yweW5ZrXfNLz1/D/M85iivNTvNsST3d1IcnALu3ue9d34d+Gd1cFZtbl+zRdfJjIZz9T0H616fpel2OlW/k6fbRwR99g5P1PU/jVyu7CcPUoPnxD5n26f5s4MZxFVqLkw65V36/wCSM/RtF0/RofL061jhBGGYDLN9WPJrQoor6GEI048sFZHzs5yqS5pu7CiiiqJCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKyfE+h2/iDSns7j5W+9HIBkxt2P+IrWoqKlONWLhNXTLp1JUpqcHZo+b9c0i80W/e0v4ijr91h91x6qe4rX8O+NdW0SNYY5FuLVekM3IUf7J6j+XtXtmraVZavam31G3SaPtnqp9QeoP0rzzV/haS7PpN+Ap6RXC9P+BD/AAr5Gvk2KwlT2mDd1+P/AAf60PsKGdYTGU/ZY2Nn6af8D+tSza/FS0ZR9q02dG7+W4cfrirLfFHSAPks78n3VB/7NXGy/DrxCj4WCCQf3lmGP1xQnw68Qt1t4U+sy/0oWNzdaOD/APAQeCyd6qaX/bx09x8VbcL/AKPpcrn/AKaShf5A1iX3xO1ebItYLW2Xsdpdh+JOP0pbf4Yaw5Hn3NlEvfDMx/LH9a2rL4V2y4N9qU0nqIYwn6nP8qr/AIWcRpql8l/wSf8AhFw+ujfzf/APP9S8SaxqWReajcOp6oG2qf8AgIwKoWVldX0ois7eaeT+7GhY/pXuWn+BvD9lgixWdx/FOxfP4Hj9K6KCGK3jEcESRRjoqKFA/AVUOHq9V82Jqfm397JnxFQorlw1L8kvuR45o/w11e82vfPFYxnsx3v+Q4/M13Oi/D/RNO2vNE17MP4p+V/75HH55rrqK9nDZNhMPqo3fd6/8D8DxcTnWLxGjlZdlp/wfxGxxpFGqRIqIowFUYA/CnUUV6mx5W4UUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAf//Z" alt="PostNL" style="height:90px; object-fit:contain;" />
+      <span class="logo-hint" id="logo-hint"></span>
+    </div>
+    <p class="welcome-title" id="w-title">Welkom bij PostNL Pharma and Care</p>
+  </div>
+  <div class="datetime-bar">
+    <div class="dt-item">📅 <span id="w-datum">—</span></div>
+    <div class="dt-item">🕐 <span id="w-tijd">—</span></div>
+  </div>
+  <div class="body" style="justify-content:center;gap:20px;">
+    <p style="font-size:15px;color:#64748b;text-align:center;" id="w-kies">Kies een optie om te beginnen</p>
+    <button class="btn-big btn-big-p" onclick="goTo('s-aanmeld')">➡️ <span id="w-aan">Aanmelden</span></button>
+    <button class="btn-big btn-big-s" onclick="goTo('s-afmeld')">⬅️ <span id="w-af">Afmelden</span></button>
+  </div>
+  <div class="footer"><p class="footer-text" id="w-footer">Gelieve dit scherm niet te sluiten</p></div>
+</div>
+
+<!-- AANMELDEN -->
+<div class="screen" id="s-aanmeld">
+  <div class="top-bar">
+    <div class="top-row">
+      <button class="back-btn" onclick="goTo('s-welkom')">← <span id="a-back">Terug</span></button>
+      <div class="lang-row">
+        <button class="lang-btn active" onclick="setLang('nl',this)">NL</button>
+        <button class="lang-btn" onclick="setLang('en',this)">EN</button>
+        <button class="lang-btn" onclick="setLang('fr',this)">FR</button>
+      </div>
+    </div>
+    <p class="screen-title" id="a-title">Aanmelden</p>
+  </div>
+  <div class="body" id="a-form">
+    <div class="field-row">
+      <div class="field"><label id="a-vn-lbl">Voornaam <span style="color:#FF6200">*</span></label><input id="a-vn" type="text" placeholder="Voornaam" /></div>
+      <div class="field"><label id="a-an-lbl">Achternaam <span style="color:#FF6200">*</span></label><input id="a-an" type="text" placeholder="Achternaam" /></div>
+    </div>
+    <div class="field"><label id="a-fi-lbl">Firma <span style="color:#FF6200">*</span></label><input id="a-fi" type="text" placeholder="Bedrijfsnaam" /></div>
+    <div class="divider"></div>
+    <div class="field-row">
+      <div class="field"><label id="a-dat-lbl">Datum</label><input id="a-dat" readonly /><span class="auto-tag">✓ <span id="a-auto">Automatisch</span></span></div>
+      <div class="field"><label id="a-tij-lbl">Aankomsttijd</label><input id="a-tij" readonly /><span class="auto-tag">✓ <span class="a-auto2">Automatisch</span></span></div>
+    </div>
+    <div class="divider"></div>
+    <div class="field"><label id="a-vw-lbl">Voor wie komt u? <span style="color:#FF6200">*</span></label><select id="a-vw"><option value="">—</option></select></div>
+    <div class="divider" id="foto-divider"></div>
+    <!-- CAMERA SECTIE -->
+    <div class="field" id="foto-veld" style="display:none;">
+      <label id="a-foto-lbl">📸 Foto <span id="foto-verplicht-ster" style="color:#FF6200">*</span></label>
+      <div id="camera-wrap" style="display:none;flex-direction:column;gap:8px;">
+        <video id="camera-video" autoplay playsinline style="width:100%;border-radius:10px;border:2px solid #e2e8f0;max-height:200px;object-fit:cover;"></video>
+        <button type="button" onclick="neemFoto()" style="background:#FF6200;color:white;border:none;border-radius:10px;height:44px;font-size:15px;font-weight:600;cursor:pointer;">📸 Foto nemen</button>
+      </div>
+      <canvas id="camera-canvas" style="display:none;"></canvas>
+      <div id="foto-preview" style="display:none;flex-direction:column;gap:8px;">
+        <img id="foto-img" style="width:100%;border-radius:10px;border:2px solid #16a34a;max-height:200px;object-fit:cover;" />
+        <button type="button" onclick="herneemFoto()" style="background:#f8fafc;color:#64748b;border:1.5px solid #e2e8f0;border-radius:10px;height:40px;font-size:14px;cursor:pointer;">🔄 Opnieuw nemen</button>
+      </div>
+      <button type="button" id="start-camera-btn" onclick="startCamera()" style="background:#f8fafc;color:#FF6200;border:2px dashed #FF6200;border-radius:10px;height:44px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">📸 <span id="start-camera-lbl">Camera activeren</span></button>
+    </div>
+    <div class="err-box" id="a-err">⚠️ <span id="a-err-txt">Vul alle verplichte velden in.</span></div>
+    <button class="btn-primary" onclick="doAanmelden()">➡️ <span id="a-btn">Aanmelden</span></button>
+  </div>
+  <div class="bev-wrap" id="a-bev">
+    <div class="bev-icon" style="background:#dcfce7;font-size:32px;">✅</div>
+    <p style="font-size:20px;font-weight:700;color:#1e293b;" id="a-bev-t">Aanmelding gelukt!</p>
+    <p style="font-size:14px;color:#64748b;" id="a-bev-s">U bent succesvol aangemeld.</p>
+    <div id="a-mail-status" style="font-size:13px;min-height:20px;font-weight:500;"></div>
+    <img id="a-bev-foto" style="display:none;width:120px;height:120px;border-radius:10px;object-fit:cover;border:2px solid #e2e8f0;" />
+    <div class="bev-box">
+      <p style="font-size:12px;color:#64748b;margin-bottom:6px;font-weight:600;" id="a-bev-g">Uw gegevens</p>
+      <p style="font-size:15px;font-weight:700;" id="a-bev-naam">—</p>
+      <p style="font-size:13px;color:#64748b;" id="a-bev-fi">—</p>
+      <p style="font-size:13px;color:#64748b;" id="a-bev-vw">—</p>
+      <p style="font-size:13px;color:#64748b;" id="a-bev-tij">—</p>
+    </div>
+    <p style="font-size:12px;color:#94a3b8;"><span id="a-bev-cd">Dit scherm sluit in</span> <span id="a-cd">5</span>s.</p>
+  </div>
+</div>
+
+<!-- AFMELDEN -->
+<div class="screen" id="s-afmeld">
+  <div class="top-bar">
+    <div class="top-row">
+      <button class="back-btn" onclick="goTo('s-welkom')">← <span id="af-back">Terug</span></button>
+      <div class="lang-row">
+        <button class="lang-btn active" onclick="setLang('nl',this)">NL</button>
+        <button class="lang-btn" onclick="setLang('en',this)">EN</button>
+        <button class="lang-btn" onclick="setLang('fr',this)">FR</button>
+      </div>
+    </div>
+    <p class="screen-title" id="af-title">Afmelden</p>
+  </div>
+  <div class="body" id="af-form">
+    <div class="field"><label id="af-zoek-lbl">Zoek op naam</label><input id="af-zoek" type="text" oninput="doZoek()" placeholder="Typ uw naam..." /></div>
+    <div id="af-res"></div>
+    <div class="err-box" id="af-err">⚠️ <span id="af-err-txt">Selecteer een bezoeker.</span></div>
+    <button class="btn-primary" id="af-btn" onclick="doAfmelden()" disabled>⬅️ <span id="af-btn-lbl">Afmelden</span></button>
+  </div>
+  <div class="bev-wrap" id="af-bev">
+    <div class="bev-icon" style="background:#fee2e2;font-size:32px;">👋</div>
+    <p style="font-size:20px;font-weight:700;color:#1e293b;" id="af-bev-t">Afmelding gelukt!</p>
+    <p style="font-size:14px;color:#64748b;" id="af-bev-s">U bent succesvol afgemeld.</p>
+    <div class="bev-box">
+      <p style="font-size:12px;color:#64748b;margin-bottom:6px;font-weight:600;" id="af-bev-g">Overzicht</p>
+      <p style="font-size:15px;font-weight:700;" id="af-bev-naam">—</p>
+      <p style="font-size:13px;color:#64748b;" id="af-bev-fi">—</p>
+      <p style="font-size:13px;color:#64748b;" id="af-bev-aan">—</p>
+      <p style="font-size:13px;color:#64748b;" id="af-bev-ver">—</p>
+    </div>
+    <p style="font-size:12px;color:#94a3b8;"><span id="af-bev-cd">Dit scherm sluit in</span> <span id="af-cd">5</span>s.</p>
+  </div>
+</div>
+
+<!-- PIN -->
+<div class="screen" id="s-pin">
+  <div class="top-bar">
+    <div class="top-row">
+      <button class="back-btn" onclick="goTo('s-welkom')">← Terug</button>
+      <div></div>
+    </div>
+    <p class="screen-title">🔐 Admin — Toegang</p>
+  </div>
+  <div class="pin-wrap">
+    <p style="font-size:16px;font-weight:600;color:#1e293b;">Voer uw pincode in</p>
+    <div class="pin-dots"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div>
+    <div class="pin-grid">
+      <button class="pin-btn" onclick="pinP('1')">1</button><button class="pin-btn" onclick="pinP('2')">2</button><button class="pin-btn" onclick="pinP('3')">3</button>
+      <button class="pin-btn" onclick="pinP('4')">4</button><button class="pin-btn" onclick="pinP('5')">5</button><button class="pin-btn" onclick="pinP('6')">6</button>
+      <button class="pin-btn" onclick="pinP('7')">7</button><button class="pin-btn" onclick="pinP('8')">8</button><button class="pin-btn" onclick="pinP('9')">9</button>
+      <button class="pin-btn" onclick="pinCl()">✕</button>
+      <button class="pin-btn" onclick="pinP('0')">0</button>
+      <button class="pin-btn" onclick="pinBk()">⌫</button>
+    </div>
+    <p style="font-size:13px;color:#dc2626;min-height:18px;font-weight:500;" id="pin-err"></p>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="screen" id="s-admin">
+  <div class="top-bar">
+    <div class="top-row">
+      <p style="color:white;font-size:16px;font-weight:700;">🛡️ Admin</p>
+      <button class="logout-btn" onclick="goTo('s-welkom')">🚪 Afsluiten</button>
+    </div>
+  </div>
+  <div class="admin-tabs">
+    <button class="atab active" onclick="switchATab('log',this)">📋 Logboek</button>
+    <button class="atab" onclick="switchATab('mw',this)">👥 Medewerkers</button>
+    <button class="atab" onclick="switchATab('inst',this)">⚙️ Instellingen</button>
+  </div>
+  <div class="body">
+
+    <div class="apanel active" id="ap-log">
+      <div class="filter-row">
+        <input type="date" id="adm-fd" onchange="renderLog()" style="flex:none;width:140px;" />
+        <input type="text" id="adm-fz" placeholder="Zoek naam..." oninput="renderLog()" style="flex:1;min-width:80px;" />
+        <button class="export-btn" onclick="exportCSV()">⬇️ Export</button>
+      </div>
+      <div class="filter-row">
+        <span class="sel-count-lbl" id="sel-count-lbl"></span>
+        <button class="del-sel-btn" id="del-sel-btn" onclick="confirmDelSel()">🗑️ Verwijder selectie</button>
+        <button class="del-all-btn" onclick="confirmDelAll()">🗑️ Verwijder alles</button>
+      </div>
+      <div class="log-wrap">
+        <table class="log-table">
+          <thead><tr>
+            <th class="col-chk"><input type="checkbox" id="chk-all" onchange="toggleAllChk(this)" style="cursor:pointer;width:16px;height:16px;" /></th>
+            <th class="col-naam">Naam</th><th class="col-firma">Firma</th><th class="col-voor">Voor wie</th>
+            <th class="col-aan">Aankomst</th><th class="col-ver">Vertrek</th><th class="col-stat">Status</th><th class="col-act"></th>
+          </tr></thead>
+          <tbody id="log-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="apanel" id="ap-mw">
+      <p class="slabel">Medewerkers in dropdown</p>
+      <div id="mw-list"></div>
+      <div id="mw-form" style="display:none;">
+        <div class="add-form-box">
+          <p style="font-size:13px;font-weight:700;color:#1e293b;">➕ Nieuwe medewerker</p>
+          <div class="aform-row"><input id="mw-n" placeholder="Naam" /><input id="mw-f" placeholder="Functie" /></div>
+          <div class="aform-row"><input id="mw-a" placeholder="Afdeling" /><input id="mw-e" placeholder="E-mailadres" type="email" /></div>
+          <div class="field" style="margin-top:4px;"><input id="mw-cc" placeholder="CC e-mailadressen (komma gescheiden, optioneel)" type="text" style="height:40px;border-radius:8px;border:2px solid #e2e8f0;background:#ffffff;padding:0 12px;font-size:13px;color:#1e293b;width:100%;outline:none;" /></div>
+          <div class="aform-row"><button class="btn-csm" onclick="hideMwF()">Annuleren</button><button class="btn-save" onclick="saveMw()">Opslaan</button></div>
+        </div>
+      </div>
+      <button class="add-btn" id="mw-add-btn" onclick="showMwF()">➕ Medewerker toevoegen</button>
+    </div>
+
+    <div class="apanel" id="ap-inst">
+      <p class="slabel">Foto bij aanmelding</p>
+      <div style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div>
+          <p style="font-size:13px;font-weight:600;color:#1e293b;">Foto verplicht maken</p>
+          <p style="font-size:11px;color:#94a3b8;margin-top:2px;">Bezoekers moeten een foto nemen voor ze kunnen aanmelden</p>
+        </div>
+        <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;">
+          <input type="checkbox" id="foto-verplicht-toggle" onchange="toggleFotoVerplicht(this)" style="opacity:0;width:0;height:0;">
+          <span id="toggle-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#e2e8f0;border-radius:26px;transition:.2s;"></span>
+          <span id="toggle-knob" style="position:absolute;height:20px;width:20px;left:3px;bottom:3px;background-color:white;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
+        </label>
+      </div>
+      <p class="slabel" style="margin-top:8px;">Pincode wijzigen</p>
+      <div style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;padding:14px;display:flex;flex-direction:column;gap:10px;">
+        <input type="password" id="pin-new" maxlength="4" placeholder="Nieuwe pincode (4 cijfers)" style="height:42px;border-radius:8px;border:2px solid #e2e8f0;background:#ffffff;padding:0 12px;font-size:15px;color:#1e293b;width:100%;outline:none;" />
+        <button class="btn-save" onclick="savePin()" style="height:42px;font-size:14px;">Pincode opslaan</button>
+        <p id="pin-save-msg" style="font-size:12px;color:#16a34a;min-height:16px;font-weight:600;"></p>
+      </div>
+
+      <p class="slabel" style="margin-top:8px;">🗑️ Automatische foto-cleanup</p>
+      <div style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;padding:14px;display:flex;flex-direction:column;gap:12px;">
+        <p style="font-size:11px;color:#94a3b8;margin:0;">Verwijdert oude foto's van Google Drive (en de link in het logboek) volgens dit schema.</p>
+
+        <div class="field" style="gap:5px;">
+          <label style="font-size:12px;color:#64748b;font-weight:600;">Dag van de maand</label>
+          <select id="cleanup-dag" style="height:42px;border-radius:8px;border:2px solid #e2e8f0;background:#ffffff;padding:0 12px;font-size:14px;color:#1e293b;width:100%;outline:none;">
+            <!-- 1 t/m 28 om elke maand zeker te zijn dat de dag bestaat -->
+          </select>
+        </div>
+
+        <div class="field" style="gap:5px;">
+          <label style="font-size:12px;color:#64748b;font-weight:600;">Uur van uitvoering</label>
+          <select id="cleanup-uur" style="height:42px;border-radius:8px;border:2px solid #e2e8f0;background:#ffffff;padding:0 12px;font-size:14px;color:#1e293b;width:100%;outline:none;">
+            <!-- 0 t/m 23 -->
+          </select>
+        </div>
+
+        <div class="field" style="gap:5px;">
+          <label style="font-size:12px;color:#64748b;font-weight:600;">Foto's verwijderen na (aantal dagen oud)</label>
+          <input type="number" id="cleanup-dagenoud" min="1" max="365" placeholder="30" style="height:42px;border-radius:8px;border:2px solid #e2e8f0;background:#ffffff;padding:0 12px;font-size:14px;color:#1e293b;width:100%;outline:none;" />
+        </div>
+
+        <button class="btn-save" onclick="saveCleanupSettings()" style="height:42px;font-size:14px;">Cleanup-planning opslaan</button>
+        <p id="cleanup-save-msg" style="font-size:12px;color:#16a34a;min-height:16px;font-weight:600;margin:0;"></p>
+
+        <div class="divider"></div>
+
+        <p style="font-size:11px;color:#94a3b8;margin:0;" id="cleanup-laatste-run">Laatste uitvoering: onbekend</p>
+
+        <button onclick="runCleanupNu()" style="background:#fef2f2;color:#dc2626;border:1.5px dashed #fecaca;border-radius:10px;height:44px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+          🧪 Cleanup nu testen
+        </button>
+        <p id="cleanup-test-result" style="font-size:12px;font-weight:500;min-height:16px;margin:0;"></p>
+      </div>
+
+      <p class="slabel" style="margin-top:8px;">Sync status</p>
+      <div style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;padding:14px;display:flex;flex-direction:column;gap:6px;">
+        <p id="sync-status" style="font-size:13px;font-weight:500;">⏳ Laden...</p>
+        <p id="laatst-bewaard" style="font-size:11px;color:#94a3b8;">💾 Nog niet bewaard</p>
+      </div>
+      <p class="slabel" style="margin-top:8px;">Integraties</p>
+      <div style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;padding:14px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;gap:10px;font-size:13px;">📧 <span style="font-weight:600;">EmailJS</span><span class="badge badge-in">✓ Actief</span></div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:13px;">📊 <span style="font-weight:600;">Google Sheets</span><span class="badge badge-in">✓ Actief</span></div>
+      </div>
+      <p class="slabel" style="margin-top:8px;">Over</p>
+      <div style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;padding:14px;">
+        <p style="font-size:13px;color:#64748b;font-weight:500;">PostNL Pharma and Care — Bezoekersregistratie v1.0</p>
+        <p style="font-size:12px;color:#94a3b8;margin-top:3px;">EmailJS + Google Sheets geïntegreerd</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════
+// CONFIGURATIE
+// ══════════════════════════════════════
+const EMAILJS_SERVICE  = 'service_rfiivjj';
+const EMAILJS_TEMPLATE = 'template_ssyhwrb';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwwwfmYCPrc4zVIKKEGNvf45A_2WOV9m37w2JJ9Z686-GKX7BkTPw-pY5hGpVZDoSg4/exec';
+const LS_MWS = 'postnl_mws';
+const LS_BEZ = 'postnl_bezoekers';
+const LS_PIN = 'postnl_pin';
+const LS_QUEUE = 'postnl_queue';
+
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+let pinCode='1234', pinInput='', lang='nl', selAfId=null, logoClicks=0, logoTimer=null;
+let selectedIds = new Set();
+let mws = [];
+let bezoekers = [];
+let syncQueue = [];
+let fotoBase64 = null;
+let cameraStream = null;
+let fotoVerplicht = false;
+const LS_FOTOVERPLICHT = 'postnl_foto_verplicht';
+
+function vdg(){const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
+function g(id){return document.getElementById(id);}
+function s(id,v){const e=g(id);if(e)e.textContent=v;}
+function si(id,v){const e=g(id);if(e)e.innerHTML=v;}
+function isOnline(){return navigator.onLine;}
+
+// ══════════════════════════════════════
+// LOKALE OPSLAG
+// ══════════════════════════════════════
+let alleHistorieBezoekers = []; // volledige lokale backup, alle dagen — vangnet voor Sheets
+let laatstBewaard = null;
+
+function slaLokaalmOp(){
+  try {
+    // Merge huidige 'bezoekers' (vandaag) in de volledige historie voor we opslaan
+    const today = vdg();
+    alleHistorieBezoekers = alleHistorieBezoekers.filter(b => b.datum !== today);
+    alleHistorieBezoekers = alleHistorieBezoekers.concat(bezoekers);
+
+    localStorage.setItem(LS_MWS, JSON.stringify(mws));
+    localStorage.setItem(LS_BEZ, JSON.stringify(alleHistorieBezoekers));
+    localStorage.setItem(LS_PIN, pinCode);
+    localStorage.setItem(LS_QUEUE, JSON.stringify(syncQueue));
+    localStorage.setItem(LS_FOTOVERPLICHT, fotoVerplicht ? '1' : '0');
+    laatstBewaard = new Date();
+    updateBewaardIndicatie();
+  } catch(e){
+    console.error('Lokaal opslaan mislukt (mogelijk geheugen vol):', e);
+    const el = g('sync-status');
+    if(el){ el.innerHTML = '⚠️ Lokaal opslaan mislukt — apparaatgeheugen mogelijk vol'; el.style.color='#dc2626'; }
+  }
+}
+
+function laadLokaal(){
+  try {
+    const mwsData = localStorage.getItem(LS_MWS);
+    if(mwsData) mws = JSON.parse(mwsData);
+    const bezData = localStorage.getItem(LS_BEZ);
+    if(bezData) {
+      alleHistorieBezoekers = JSON.parse(bezData);
+      const today = vdg();
+      bezoekers = alleHistorieBezoekers.filter(b => b.datum === today);
+    }
+    const pinData = localStorage.getItem(LS_PIN);
+    if(pinData) pinCode = pinData;
+    const queueData = localStorage.getItem(LS_QUEUE);
+    if(queueData) syncQueue = JSON.parse(queueData);
+    const fvData = localStorage.getItem(LS_FOTOVERPLICHT);
+    if(fvData !== null) fotoVerplicht = fvData === '1';
+    updateFotoVeldUI();
+  } catch(e){
+    console.error('Lokaal laden mislukt:', e);
+  }
+}
+
+function updateBewaardIndicatie(){
+  const el = g('laatst-bewaard');
+  if(!el || !laatstBewaard) return;
+  const h = String(laatstBewaard.getHours()).padStart(2,'0');
+  const m = String(laatstBewaard.getMinutes()).padStart(2,'0');
+  const s = String(laatstBewaard.getSeconds()).padStart(2,'0');
+  el.textContent = '💾 Laatst lokaal bewaard: '+h+':'+m+':'+s;
+}
+
+// ══════════════════════════════════════
+// SYNC WACHTRIJ
+// ══════════════════════════════════════
+function voegToeAanQueue(item){
+  item.id = 'q' + Date.now() + Math.random();
+  item.timestamp = new Date().toISOString();
+  item.pogingen = 0;
+  syncQueue.push(item);
+  slaLokaalmOp();
+  updateSyncStatus();
+}
+
+const MAX_POGINGEN = 5; // Na 5 mislukte pogingen: item markeren als 'mislukt' ipv eindeloos proberen
+
+async function verwerkQueue(){
+  if(!isOnline() || syncQueue.length === 0){ updateSyncStatus(); return; }
+  const teVerwerken = [...syncQueue];
+  for(const item of teVerwerken){
+    if(item.pogingen >= MAX_POGINGEN){
+      item.mislukt = true;
+      continue; // sla over, telt niet meer mee als "wachtend"
+    }
+    try {
+      if(item.type === 'aanmelden' || item.type === 'afmelden'){
+        await fetch(SHEETS_URL, {
+          method:'POST', mode:'no-cors',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify(item)
+        });
+        syncQueue = syncQueue.filter(q => q.id !== item.id);
+      }
+      if(item.type === 'uploadFoto'){
+        const res = await fetch(SHEETS_URL, {
+          method:'POST',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify(item)
+        });
+        const text = await res.text();
+        const json = JSON.parse(text);
+        if(json.status === 'ok' && json.data && json.data.fotoUrl){
+          const bez = bezoekers.find(b => b.id === item.bezoekerId);
+          if(bez) bez.fotoUrl = json.data.fotoUrl;
+          slaLokaalmOp();
+          syncQueue = syncQueue.filter(q => q.id !== item.id);
+        } else {
+          throw new Error('Geen fotoUrl in respons');
+        }
+      }
+      if(item.type === 'sendEmail'){
+        await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, item.params);
+        syncQueue = syncQueue.filter(q => q.id !== item.id);
+      }
+      if(item.type === 'saveMedewerkers'){
+        await fetch(SHEETS_URL, {
+          method:'POST', mode:'no-cors',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify(item)
+        });
+        syncQueue = syncQueue.filter(q => q.id !== item.id);
+      }
+      if(item.type === 'savePin'){
+        await fetch(SHEETS_URL, {
+          method:'POST', mode:'no-cors',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify(item)
+        });
+        syncQueue = syncQueue.filter(q => q.id !== item.id);
+      }
+    } catch(e){
+      console.error('Queue item mislukt (poging '+(item.pogingen+1)+'/'+MAX_POGINGEN+'):', item.type, e);
+      const queueItem = syncQueue.find(q => q.id === item.id);
+      if(queueItem) queueItem.pogingen = (queueItem.pogingen||0) + 1;
+    }
+  }
+  slaLokaalmOp();
+  updateSyncStatus();
+}
+
+function updateSyncStatus(){
+  const el = g('sync-status');
+  if(!el) return;
+  const wachtend = syncQueue.filter(q => !q.mislukt && (q.pogingen||0) < MAX_POGINGEN).length;
+  const mislukt = syncQueue.filter(q => q.mislukt || (q.pogingen||0) >= MAX_POGINGEN).length;
+
+  if(wachtend > 0){
+    el.innerHTML = `⏳ ${wachtend} item(s) wachten op sync`;
+    el.style.color = '#f59e0b';
+  } else if(mislukt > 0){
+    el.innerHTML = `❌ ${mislukt} item(s) definitief mislukt — <a href="#" onclick="wisFaaldeItems();return false;" style="color:#dc2626;text-decoration:underline;">wissen</a>`;
+    el.style.color = '#dc2626';
+  } else {
+    el.innerHTML = isOnline() ? '✅ Alles gesynchroniseerd' : '📵 Offline — data lokaal opgeslagen';
+    el.style.color = isOnline() ? '#16a34a' : '#64748b';
+  }
+}
+
+function wisFaaldeItems(){
+  syncQueue = syncQueue.filter(q => !q.mislukt && (q.pogingen||0) < MAX_POGINGEN);
+  slaLokaalmOp();
+  updateSyncStatus();
+}
+
+// Online/offline events
+window.addEventListener('online', () => { updateSyncStatus(); verwerkQueue(); });
+window.addEventListener('offline', () => { updateSyncStatus(); });
+
+// Periodieke status-check zodat de teller nooit "blijft hangen"
+setInterval(updateSyncStatus, 10000);
+
+// ══════════════════════════════════════
+// GOOGLE SHEETS
+// ══════════════════════════════════════
+async function sheetsPost(data){
+  if(!isOnline()){ voegToeAanQueue(data); return false; }
+  try {
+    await fetch(SHEETS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(data)});
+    return true;
+  } catch(e){ voegToeAanQueue(data); return false; }
+}
+
+async function sheetsGet(type){
+  if(!isOnline()) return null;
+  try {
+    const res = await fetch(SHEETS_URL+'?type='+type);
+    const json = await res.json();
+    if(json.status==='ok') return json.data;
+  } catch(e){ console.error('Sheets GET fout:', e); }
+  return null;
+}
+
+async function sheetsAanmelden(b){
+  return await sheetsPost({type:'aanmelden',naam:b.naam,firma:b.firma,voor:b.voor,datum:b.datum,aankomst:b.aankomst,fotoUrl:b.fotoUrl||''});
+}
+async function sheetsAfmelden(b){
+  return await sheetsPost({type:'afmelden',naam:b.naam,vertrek:b.vertrek});
+}
+async function sheetsSaveMedewerkers(){
+  await sheetsPost({type:'saveMedewerkers', medewerkers: mws.map(m=>({naam:m.naam,functie:m.functie,afdeling:m.afdeling,email:m.email,cc:m.cc||''}))});
+}
+async function sheetsSavePin(pin){
+  await sheetsPost({type:'savePin', pincode: pin});
+}
+
+// ══════════════════════════════════════
+// FOTO-CLEANUP — instellingen ophalen, opslaan, test-run
+// ══════════════════════════════════════
+let cleanupSettings = { dag: 1, uur: 3, dagenOud: 30, laatsteRun: '' };
+
+function vulCleanupDropdowns(){
+  const dagSel = g('cleanup-dag');
+  const uurSel = g('cleanup-uur');
+  if(dagSel && dagSel.options.length === 0){
+    for(let d=1; d<=28; d++){
+      const opt = document.createElement('option');
+      opt.value = d; opt.textContent = d + (d===1?'e':'e') + ' van de maand';
+      dagSel.appendChild(opt);
+    }
+  }
+  if(uurSel && uurSel.options.length === 0){
+    for(let h=0; h<24; h++){
+      const opt = document.createElement('option');
+      opt.value = h; opt.textContent = String(h).padStart(2,'0')+':00';
+      uurSel.appendChild(opt);
+    }
+  }
+}
+
+async function laadCleanupSettings(){
+  vulCleanupDropdowns();
+  if(isOnline()){
+    const data = await sheetsGet('getCleanupSettings');
+    if(data){
+      cleanupSettings.dag = parseInt(data.dag) || 1;
+      cleanupSettings.uur = parseInt(data.uur) || 3;
+      cleanupSettings.dagenOud = parseInt(data.dagenOud) || 30;
+      cleanupSettings.laatsteRun = data.laatsteRun || '';
+    }
+  }
+  const dagSel = g('cleanup-dag');
+  const uurSel = g('cleanup-uur');
+  const dagenInput = g('cleanup-dagenoud');
+  if(dagSel) dagSel.value = cleanupSettings.dag;
+  if(uurSel) uurSel.value = cleanupSettings.uur;
+  if(dagenInput) dagenInput.value = cleanupSettings.dagenOud;
+  toonLaatsteRun();
+}
+
+function toonLaatsteRun(){
+  const el = g('cleanup-laatste-run');
+  if(!el) return;
+  if(!cleanupSettings.laatsteRun){
+    el.textContent = 'Laatste uitvoering: nog niet uitgevoerd';
+    return;
+  }
+  try {
+    const d = new Date(cleanupSettings.laatsteRun);
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yyyy = d.getFullYear();
+    const h = String(d.getHours()).padStart(2,'0');
+    const m = String(d.getMinutes()).padStart(2,'0');
+    el.textContent = `Laatste uitvoering: ${dd}/${mm}/${yyyy} om ${h}:${m}`;
+  } catch(e){
+    el.textContent = 'Laatste uitvoering: onbekend';
+  }
+}
+
+async function saveCleanupSettings(){
+  const dag = g('cleanup-dag').value;
+  const uur = g('cleanup-uur').value;
+  const dagenOud = g('cleanup-dagenoud').value || 30;
+  cleanupSettings.dag = parseInt(dag);
+  cleanupSettings.uur = parseInt(uur);
+  cleanupSettings.dagenOud = parseInt(dagenOud);
+
+  s('cleanup-save-msg', '⏳ Opslaan...');
+  const ok = await sheetsPost({
+    type: 'saveCleanupSettings',
+    dag: cleanupSettings.dag,
+    uur: cleanupSettings.uur,
+    dagenOud: cleanupSettings.dagenOud,
+    laatsteRun: cleanupSettings.laatsteRun
+  });
+  if(ok !== false){
+    s('cleanup-save-msg', '✅ Planning opgeslagen — wordt elke maand automatisch uitgevoerd');
+  } else {
+    s('cleanup-save-msg', '⚠️ Offline — wordt opgeslagen zodra internet terug is');
+  }
+  setTimeout(()=>s('cleanup-save-msg',''), 5000);
+}
+
+async function runCleanupNu(){
+  if(!isOnline()){
+    s('cleanup-test-result', '📵 Geen internet — test niet mogelijk');
+    return;
+  }
+  const dagenOud = parseInt(g('cleanup-dagenoud').value) || cleanupSettings.dagenOud || 30;
+  s('cleanup-test-result', '⏳ Cleanup wordt uitgevoerd...');
+  try {
+    const res = await fetch(SHEETS_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({type:'runCleanupNow', dagenOud})
+    });
+    const text = await res.text();
+    const json = JSON.parse(text);
+    if(json.status === 'ok'){
+      const d = json.data;
+      s('cleanup-test-result', `✅ Klaar: ${d.verwijderdeBestanden} foto's en ${d.verwijderdeMappen} map(pen) verwijderd, ${d.verwijderdeLinks} link(s) gewist uit logboek`);
+      cleanupSettings.laatsteRun = d.uitgevoerdOp;
+      toonLaatsteRun();
+    } else {
+      s('cleanup-test-result', '❌ Fout: '+(json.message||'onbekend'));
+    }
+  } catch(e){
+    console.error('[Cleanup] fout:', e);
+    s('cleanup-test-result', '❌ Fout bij uitvoeren: '+e.message);
+  }
+}
+
+async function uploadFoto(bezoekerId, naam, datum, base64, mimeType){
+  if(!isOnline()){
+    console.warn('[Foto] Offline — toegevoegd aan wachtrij');
+    voegToeAanQueue({type:'uploadFoto', bezoekerId, naam, datum, base64, mimeType});
+    return null;
+  }
+  try {
+    console.log('[Foto] Versturen naar Apps Script, grootte base64:', base64.length, 'tekens');
+    const res = await fetch(SHEETS_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({type:'uploadFoto', naam, datum, base64, mimeType})
+    });
+    console.log('[Foto] HTTP status:', res.status);
+    const text = await res.text();
+    console.log('[Foto] Ruwe respons:', text.substring(0, 300));
+    const json = JSON.parse(text);
+    if(json.status==='ok' && json.data && json.data.fotoUrl){
+      console.log('[Foto] ✅ Upload gelukt:', json.data.fotoUrl);
+      return json.data.fotoUrl;
+    } else {
+      console.error('[Foto] ❌ Apps Script gaf geen fotoUrl terug:', json);
+    }
+  } catch(e){
+    console.error('[Foto] ❌ Fetch/parse fout:', e);
+    voegToeAanQueue({type:'uploadFoto', bezoekerId, naam, datum, base64, mimeType});
+  }
+  return null;
+}
+
+// ══════════════════════════════════════
+// EMAILJS
+// ══════════════════════════════════════
+async function sendEmail(bezoeker, mw){
+  const params = {
+    to_email: mw.email,
+    cc_email: mw.cc || '',
+    ontvanger_naam: mw.naam,
+    bezoeker_naam: bezoeker.naam,
+    bezoeker_firma: bezoeker.firma,
+    aankomst_tijd: bezoeker.aankomst,
+    aankomst_datum: bezoeker.datum,
+    voor_wie: mw.naam,
+    foto_url: bezoeker.fotoUrl ? `Foto: ${bezoeker.fotoUrl}` : 'Geen foto beschikbaar',
+  };
+  if(!isOnline()){
+    voegToeAanQueue({type:'sendEmail', params});
+    return false;
+  }
+  try {
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, params);
+    return true;
+  } catch(e){
+    voegToeAanQueue({type:'sendEmail', params});
+    return false;
+  }
+}
+
+// ══════════════════════════════════════
+// DATA LADEN BIJ OPSTARTEN
+// ══════════════════════════════════════
+async function laadData(){
+  const loadEl = g('load-overlay');
+  if(loadEl) loadEl.style.display='flex';
+
+  // Eerst lokaal laden (altijd snel, en het vangnet)
+  laadLokaal();
+  updateDropdown();
+  applyLang();
+
+  // Dan online ophalen als internet beschikbaar
+  if(isOnline()){
+    try {
+      const [mwData, pinData, bevData] = await Promise.all([
+        sheetsGet('getMedewerkers'),
+        sheetsGet('getPin'),
+        sheetsGet('getBezoekers')
+      ]);
+      if(mwData && mwData.length > 0){
+        mws = mwData.map((m,i)=>({id:'mw'+i+'_'+Date.now(), naam:m.naam, functie:m.functie, afdeling:m.afdeling, email:m.email, cc:m.cc||''}));
+      }
+      if(pinData && pinData.pincode) pinCode = String(pinData.pincode);
+
+      // ✅ FIX: MERGEN in plaats van overschrijven — nooit een lokale bezoeker verliezen
+      if(bevData){
+        const today = vdg();
+        const sheetsVandaag = bevData.filter(b=>b.datum===today).map((b,i)=>({
+          id:'b'+i+'_loaded', naam:b.naam, firma:b.firma, voor:b.voor,
+          datum:b.datum, aankomst:b.aankomst, vertrek:b.vertrek||'', fotoUrl:b.fotoUrl||''
+        }));
+        bezoekers = mergeBezoekers(bezoekers, sheetsVandaag);
+      }
+      slaLokaalmOp();
+      // Verwerk wachtrij
+      await verwerkQueue();
+    } catch(e){ console.error('Online laden mislukt:', e); }
+  }
+
+  if(loadEl) loadEl.style.display='none';
+  updateDropdown();
+  applyLang();
+  updateSyncStatus();
+}
+
+// ✅ Combineert lokale bezoekers met Sheets-bezoekers zonder data te verliezen.
+// Matcht op naam+aankomsttijd (unieke combinatie per dag). Sheets is leidend voor
+// status (vertrek), maar elke bezoeker die ergens voorkomt blijft in de lijst staan.
+function mergeBezoekers(lokaal, vanSheets){
+  const result = [];
+  const gebruikt = new Set();
+
+  // Loop over Sheets-data (de meest up-to-date bron voor wie al afgemeld is)
+  vanSheets.forEach(sb => {
+    const matchKey = sb.naam + '|' + sb.aankomst;
+    const lokaleMatch = lokaal.find(lb => (lb.naam + '|' + lb.aankomst) === matchKey);
+    if(lokaleMatch){
+      // Combineer: behoud lokale id en eventueel lokale fotoUrl als Sheets er geen heeft
+      result.push({
+        ...lokaleMatch,
+        vertrek: sb.vertrek || lokaleMatch.vertrek || '',
+        fotoUrl: sb.fotoUrl || lokaleMatch.fotoUrl || ''
+      });
+      gebruikt.add(matchKey);
+    } else {
+      // Stond niet lokaal (bv. aangemeld op ander toestel) — toevoegen
+      result.push(sb);
+      gebruikt.add(matchKey);
+    }
+  });
+
+  // Lokale bezoekers die nog niet in Sheets staan (bv. nog in sync-wachtrij) — behouden
+  lokaal.forEach(lb => {
+    const matchKey = lb.naam + '|' + lb.aankomst;
+    if(!gebruikt.has(matchKey)){
+      result.push(lb);
+    }
+  });
+
+  return result;
+}
+
+// ══════════════════════════════════════
+// CAMERA
+// ══════════════════════════════════════
+async function startCamera(){
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}, audio:false});
+    const video = g('camera-video');
+    video.srcObject = cameraStream;
+    g('camera-wrap').style.display='flex';
+    g('start-camera-btn').style.display='none';
+    g('foto-preview').style.display='none';
+    fotoBase64 = null;
+  } catch(e){
+    alert('Camera kon niet worden geactiveerd. Controleer de toestemming.');
+  }
+}
+
+function neemFoto(){
+  const video = g('camera-video');
+  const canvas = g('camera-canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  fotoBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+  g('foto-img').src = 'data:image/jpeg;base64,' + fotoBase64;
+  g('foto-preview').style.display='flex';
+  g('camera-wrap').style.display='none';
+  stopCamera();
+}
+
+function herneemFoto(){
+  fotoBase64 = null;
+  g('foto-preview').style.display='none';
+  startCamera();
+}
+
+function stopCamera(){
+  if(cameraStream){
+    cameraStream.getTracks().forEach(t=>t.stop());
+    cameraStream = null;
+  }
+}
+
+// ══════════════════════════════════════
+// FOTO VERPLICHT TOGGLE (admin instelling)
+// ══════════════════════════════════════
+function toggleFotoVerplicht(el){
+  fotoVerplicht = el.checked;
+  slaLokaalmOp();
+  updateFotoVeldUI();
+}
+
+function updateFotoVeldUI(){
+  const veld = g('foto-veld');
+  const divider = g('foto-divider');
+  const toggle = g('foto-verplicht-toggle');
+  const slider = g('toggle-slider');
+  const knob = g('toggle-knob');
+  if(veld) veld.style.display = fotoVerplicht ? 'flex' : 'none';
+  if(divider) divider.style.display = fotoVerplicht ? 'block' : 'none';
+  if(toggle) toggle.checked = fotoVerplicht;
+  if(slider) slider.style.backgroundColor = fotoVerplicht ? '#FF6200' : '#e2e8f0';
+  if(knob) knob.style.left = fotoVerplicht ? '27px' : '3px';
+}
+
+// ══════════════════════════════════════
+// LOGO 5x KLIKKEN = ADMIN
+// ══════════════════════════════════════
+function logoClick(){
+  logoClicks++;clearTimeout(logoTimer);
+  const hint=g('logo-hint');
+  if(logoClicks>=5){logoClicks=0;if(hint)hint.textContent='';pinInput='';updPin();if(g('pin-err'))g('pin-err').textContent='';goTo('s-pin');return;}
+  if(hint)hint.textContent='🔐 '+(5-logoClicks)+'x nog';
+  logoTimer=setTimeout(()=>{logoClicks=0;if(hint)hint.textContent='';},2000);
+}
+
+// ══════════════════════════════════════
+// NAVIGATIE
+// ══════════════════════════════════════
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  g(id).classList.add('active');
+  if(id==='s-aanmeld'){resetAan();updateDT();}
+  if(id==='s-afmeld'){resetAf();verversBezoekersAchtergrond();}
+  if(id==='s-admin'){const fd=g('adm-fd');if(fd)fd.value=vdg();renderLog();renderMw();laadCleanupSettings();}
+  if(id==='s-welkom'){stopCamera();}
+  applyLang();
+}
+
+// Haalt op de achtergrond de laatste bezoekersdata op (bv. bij openen afmeldscherm)
+// zodat aanmeldingen van andere toestellen altijd vindbaar zijn, zonder de gebruiker te laten wachten.
+async function verversBezoekersAchtergrond(){
+  if(!isOnline()) return;
+  const bevData = await sheetsGet('getBezoekers');
+  if(bevData){
+    const today = vdg();
+    const sheetsVandaag = bevData.filter(b=>b.datum===today).map((b,i)=>({
+      id:'b'+i+'_loaded', naam:b.naam, firma:b.firma, voor:b.voor,
+      datum:b.datum, aankomst:b.aankomst, vertrek:b.vertrek||'', fotoUrl:b.fotoUrl||''
+    }));
+    bezoekers = mergeBezoekers(bezoekers, sheetsVandaag);
+    slaLokaalmOp();
+    // Als de zoekbalk al iets bevat, resultaten verversen
+    const z = g('af-zoek');
+    if(z && z.value.trim()) doZoek();
+  }
+}
+
+// ══════════════════════════════════════
+// TALEN
+// ══════════════════════════════════════
+const T={
+  nl:{wT:'Welkom bij PostNL Pharma and Care',wK:'Kies een optie om te beginnen',wA:'Aanmelden',wF:'Afmelden',wFt:'Gelieve dit scherm niet te sluiten',bk:'Terug',aT:'Aanmelden',afT:'Afmelden',vn:'Voornaam',an:'Achternaam',fi:'Firma',dat:'Datum',tij:'Aankomsttijd',vw:'Voor wie komt u?',au:'Automatisch',ki:'— Kies een medewerker —',aBt:'Aanmelden',afBt:'Afmelden',aEr:'Vul alle verplichte velden in.',afEr:'Selecteer een bezoeker.',afZk:'Zoek op naam',afPl:'Typ uw naam...',aBevT:'Aanmelding gelukt!',aBevS:'U bent succesvol aangemeld.',aBevG:'Uw gegevens',aBevV:'Bezoek aan',aBevC:'Dit scherm sluit in',afBevT:'Afmelding gelukt!',afBevS:'U bent succesvol afgemeld. Tot de volgende keer!',afBevG:'Overzicht',afBevA:'Aangemeld om',afBevV:'Afgemeld om',afBevC:'Dit scherm sluit in',afVr:'Bezoek aan',afAn:'Aangemeld om',gR:'Geen bezoekers gevonden',mailOk:'✉️ Melding verstuurd naar',mailErr:'⚠️ Offline — melding verstuurd zodra internet terug is',fotoLbl:'Foto',camLbl:'Camera activeren',fotoVerplichtEr:'Maak eerst een foto voor u verder kan.',dg:['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'],mn:['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december']},
+  en:{wT:'Welcome to PostNL Pharma and Care',wK:'Please choose an option to continue',wA:'Check in',wF:'Check out',wFt:'Please do not close this screen',bk:'Back',aT:'Check in',afT:'Check out',vn:'First name',an:'Last name',fi:'Company',dat:'Date',tij:'Arrival time',vw:'Who are you visiting?',au:'Automatic',ki:'— Select a colleague —',aBt:'Check in',afBt:'Check out',aEr:'Please fill in all required fields.',afEr:'Please select a visitor.',afZk:'Search by name',afPl:'Type your name...',aBevT:'Check-in successful!',aBevS:'You have been successfully checked in.',aBevG:'Your details',aBevV:'Visiting',aBevC:'This screen closes in',afBevT:'Check-out successful!',afBevS:'You have been successfully checked out.',afBevG:'Summary',afBevA:'Checked in at',afBevV:'Checked out at',afBevC:'This screen closes in',afVr:'Visiting',afAn:'Checked in at',gR:'No visitors found',mailOk:'✉️ Notification sent to',mailErr:'⚠️ Offline — notification queued',fotoLbl:'📸 Photo (optional)',camLbl:'Activate camera',dg:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],mn:['January','February','March','April','May','June','July','August','September','October','November','December']},
+  fr:{wT:'Bienvenue chez PostNL Pharma and Care',wK:'Veuillez choisir une option pour continuer',wA:"S'enregistrer",wF:'Se déconnecter',wFt:'Veuillez ne pas fermer cet écran',bk:'Retour',aT:"S'enregistrer",afT:'Se déconnecter',vn:'Prénom',an:'Nom de famille',fi:'Entreprise',dat:'Date',tij:"Heure d'arrivée",vw:'Qui venez-vous voir?',au:'Automatique',ki:'— Choisissez un collègue —',aBt:"S'enregistrer",afBt:'Se déconnecter',aEr:'Veuillez remplir tous les champs obligatoires.',afEr:'Veuillez sélectionner un visiteur.',afZk:'Rechercher par nom',afPl:'Tapez votre nom...',aBevT:'Enregistrement réussi!',aBevS:'Vous avez été enregistré avec succès.',aBevG:'Vos coordonnées',aBevV:'Visite pour',aBevC:"Cet écran se ferme dans",afBevT:'Déconnexion réussie!',afBevS:'Vous avez été déconnecté avec succès.',afBevG:'Résumé',afBevA:'Enregistré à',afBevV:'Déconnecté à',afBevC:"Cet écran se ferme dans",afVr:'Visite pour',afAn:'Enregistré à',gR:'Aucun visiteur trouvé',mailOk:'✉️ Notification envoyée à',mailErr:"⚠️ Hors ligne — notification en attente",fotoLbl:'📸 Photo (optionnel)',camLbl:'Activer la caméra',dg:['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'],mn:['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre']}
+};
+
+function setLang(l,el){
+  lang=l;
+  document.querySelectorAll('.lang-btn').forEach(b=>{b.classList.toggle('active',b.textContent.trim()===l.toUpperCase());});
+  applyLang();
+}
+
+function applyLang(){
+  const t=T[lang];
+  s('w-title',t.wT);s('w-kies',t.wK);s('w-aan',t.wA);s('w-af',t.wF);s('w-footer',t.wFt);
+  document.querySelectorAll('[id$="-back"]').forEach(e=>e.textContent=t.bk);
+  s('a-title',t.aT);s('af-title',t.afT);
+  si('a-vn-lbl',t.vn+' <span style="color:#FF6200">*</span>');
+  si('a-an-lbl',t.an+' <span style="color:#FF6200">*</span>');
+  si('a-fi-lbl',t.fi+' <span style="color:#FF6200">*</span>');
+  s('a-dat-lbl',t.dat);s('a-tij-lbl',t.tij);
+  si('a-vw-lbl',t.vw+' <span style="color:#FF6200">*</span>');
+  s('a-auto',t.au);document.querySelectorAll('.a-auto2').forEach(e=>e.textContent=t.au);
+  s('a-btn',t.aBt);s('a-err-txt',t.aEr);
+  si('a-foto-lbl','📸 '+t.fotoLbl+' <span id="foto-verplicht-ster" style="color:#FF6200">*</span>');
+  s('start-camera-lbl',t.camLbl);
+  s('af-zoek-lbl',t.afZk);const afz=g('af-zoek');if(afz)afz.placeholder=t.afPl;
+  s('af-btn-lbl',t.afBt);s('af-err-txt',t.afEr);
+  updateDropdown();updateDT();
+}
+
+function updateDT(){
+  const now=new Date(),t=T[lang];
+  const dag=t.dg[now.getDay()],d=now.getDate(),m=t.mn[now.getMonth()],y=now.getFullYear();
+  const h=String(now.getHours()).padStart(2,'0'),mn=String(now.getMinutes()).padStart(2,'0');
+  s('w-datum',dag+' '+d+' '+m+' '+y);s('w-tijd',h+':'+mn);
+  const ad=g('a-dat');if(ad)ad.value=String(d).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+y;
+  const at=g('a-tij');if(at)at.value=h+':'+mn;
+}
+setInterval(updateDT,30000);
+
+function updateDropdown(){
+  const sel=g('a-vw');if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">'+T[lang].ki+'</option>'+mws.map(m=>`<option value="${m.id}">${m.naam} — ${m.functie} — ${m.afdeling}</option>`).join('');
+  sel.value=cur;
+}
+
+// ══════════════════════════════════════
+// AANMELDEN
+// ══════════════════════════════════════
+function resetAan(){
+  ['a-vn','a-fi','a-an'].forEach(id=>{const e=g(id);if(e)e.value='';});
+  const sel=g('a-vw');if(sel)sel.value='';
+  g('a-err').style.display='none';
+  g('a-form').style.display='flex';
+  g('a-bev').classList.remove('active');
+  fotoBase64=null;
+  g('camera-wrap').style.display='none';
+  g('foto-preview').style.display='none';
+  g('start-camera-btn').style.display='flex';
+  stopCamera();
+  updateFotoVeldUI();
+  updateDropdown();updateDT();
+}
+
+async function doAanmelden(){
+  const vn=g('a-vn').value.trim(),an=g('a-an').value.trim(),fi=g('a-fi').value.trim(),vwId=g('a-vw').value;
+  if(!vn||!an||!fi||!vwId){
+    g('a-err-txt').textContent = T[lang].aEr;
+    g('a-err').style.display='block';
+    return;
+  }
+  if(fotoVerplicht && !fotoBase64){
+    g('a-err-txt').textContent = T[lang].fotoVerplichtEr || 'Maak eerst een foto voor u verder kan.';
+    g('a-err').style.display='block';
+    return;
+  }
+  g('a-err').style.display='none';
+  const mw=mws.find(m=>m.id===vwId);
+  const now=new Date(),h=String(now.getHours()).padStart(2,'0'),mn=String(now.getMinutes()).padStart(2,'0');
+  const aankomst=h+':'+mn;
+  const nieuw={id:'b'+Date.now(),naam:vn+' '+an,firma:fi,voor:mw?mw.naam:'',datum:vdg(),aankomst,vertrek:'',fotoUrl:''};
+  bezoekers.push(nieuw);
+  slaLokaalmOp();
+
+  s('sending-msg','Bezig...');
+  g('sending-overlay').classList.add('active');
+
+  // ✅ FIX: Upload foto EERST en wacht erop, zodat fotoUrl klaar is voor mail + sheets
+  if(fotoBase64){
+    s('sending-msg','Foto uploaden...');
+    console.log('Start foto upload voor', nieuw.naam);
+    const fotoUrl = await uploadFoto(nieuw.id, nieuw.naam, nieuw.datum, fotoBase64, 'image/jpeg');
+    console.log('Foto upload resultaat:', fotoUrl);
+    if(fotoUrl){
+      nieuw.fotoUrl = fotoUrl;
+      slaLokaalmOp();
+    } else {
+      console.warn('Foto upload gaf geen URL terug — wordt later via wachtrij geprobeerd');
+    }
+  }
+
+  s('sending-msg','Melding versturen...');
+  // Sheets + email parallel — NU met correcte fotoUrl
+  const [, mailOk] = await Promise.all([
+    sheetsAanmelden(nieuw),
+    mw ? sendEmail(nieuw, mw) : Promise.resolve(false)
+  ]);
+
+  g('sending-overlay').classList.remove('active');
+
+  const t=T[lang];
+  s('a-bev-t',t.aBevT);s('a-bev-s',t.aBevS);s('a-bev-g',t.aBevG);
+  s('a-bev-naam',vn+' '+an);s('a-bev-fi',fi);
+  s('a-bev-vw',t.aBevV+': '+(mw?mw.naam:''));
+  s('a-bev-tij',g('a-dat').value+' — '+aankomst);
+  s('a-bev-cd',t.aBevC);
+
+  const ms=g('a-mail-status');
+  if(ms) ms.innerHTML = isOnline()
+    ? (mailOk ? `<span style="color:#16a34a;">${t.mailOk} ${mw?mw.naam:''}</span>` : `<span style="color:#dc2626;">${t.mailErr}</span>`)
+    : `<span style="color:#f59e0b;">${t.mailErr}</span>`;
+
+  // Toon foto preview in bevestiging
+  const bevFoto = g('a-bev-foto');
+  if(bevFoto && fotoBase64){
+    bevFoto.src = 'data:image/jpeg;base64,'+fotoBase64;
+    bevFoto.style.display='block';
+  } else if(bevFoto){ bevFoto.style.display='none'; }
+
+  g('a-form').style.display='none';
+  g('a-bev').classList.add('active');
+  updateSyncStatus();
+  let sec=5;s('a-cd',sec);
+  const iv=setInterval(()=>{sec--;s('a-cd',sec);if(sec<=0){clearInterval(iv);goTo('s-welkom');}},1000);
+}
+
+// ══════════════════════════════════════
+// AFMELDEN
+// ══════════════════════════════════════
+function resetAf(){
+  selAfId=null;
+  const z=g('af-zoek');if(z)z.value='';
+  g('af-res').innerHTML='';g('af-err').style.display='none';g('af-btn').disabled=true;
+  g('af-form').style.display='flex';g('af-bev').classList.remove('active');
+}
+
+function doZoek(){
+  const q=g('af-zoek').value.toLowerCase().trim();
+  const con=g('af-res');selAfId=null;g('af-btn').disabled=true;
+  if(!q){con.innerHTML='';return;}
+  const actief=bezoekers.filter(v=>!v.vertrek&&v.naam.toLowerCase().includes(q));
+  if(!actief.length){con.innerHTML='<div class="no-results">👤 '+T[lang].gR+'</div>';return;}
+  const t=T[lang];
+  con.innerHTML=actief.map(v=>`<div class="visitor-card" id="vc-${v.id}" onclick="selAf('${v.id}')">
+    <p class="vname">${v.naam}</p>
+    <p class="vdet">🏢 ${v.firma}</p>
+    <p class="vdet">👤 ${t.afVr}: ${v.voor}</p>
+    <p class="vdet">🕐 ${t.afAn} ${v.aankomst}</p>
+  </div>`).join('');
+}
+
+function selAf(id){
+  selAfId=id;
+  document.querySelectorAll('.visitor-card').forEach(c=>c.classList.remove('selected-card'));
+  const c=g('vc-'+id);if(c)c.classList.add('selected-card');
+  g('af-btn').disabled=false;g('af-err').style.display='none';
+}
+
+async function doAfmelden(){
+  if(!selAfId){g('af-err').style.display='block';return;}
+  const v=bezoekers.find(x=>x.id===selAfId);if(!v)return;
+  const now=new Date(),h=String(now.getHours()).padStart(2,'0'),mn=String(now.getMinutes()).padStart(2,'0');
+  v.vertrek=h+':'+mn;
+  slaLokaalmOp();
+
+  s('sending-msg','Afmelding verwerken...');
+  g('sending-overlay').classList.add('active');
+  await sheetsAfmelden(v);
+  g('sending-overlay').classList.remove('active');
+
+  const t=T[lang];
+  s('af-bev-t',t.afBevT);s('af-bev-s',t.afBevS);s('af-bev-g',t.afBevG);
+  s('af-bev-naam',v.naam);s('af-bev-fi',v.firma);
+  s('af-bev-aan',t.afBevA+': '+v.aankomst);s('af-bev-ver',t.afBevV+': '+v.vertrek);
+  s('af-bev-cd',t.afBevC);
+  g('af-form').style.display='none';g('af-bev').classList.add('active');
+  updateSyncStatus();
+  let sec=5;s('af-cd',sec);
+  const iv=setInterval(()=>{sec--;s('af-cd',sec);if(sec<=0){clearInterval(iv);goTo('s-welkom');}},1000);
+}
+
+// ══════════════════════════════════════
+// PINCODE
+// ══════════════════════════════════════
+function pinP(d){
+  if(pinInput.length>=4)return;
+  pinInput+=d;updPin();
+  if(pinInput.length===4){setTimeout(()=>{if(pinInput===pinCode){pinInput='';updPin();goTo('s-admin');}else{g('pin-err').textContent='❌ Onjuiste pincode. Probeer opnieuw.';pinInput='';updPin();}},200);}
+}
+function pinBk(){pinInput=pinInput.slice(0,-1);updPin();g('pin-err').textContent='';}
+function pinCl(){pinInput='';updPin();g('pin-err').textContent='';}
+function updPin(){for(let i=0;i<4;i++){const d=g('pd'+i);if(d)d.classList.toggle('filled',i<pinInput.length);}}
+
+// ══════════════════════════════════════
+// ADMIN TABS
+// ══════════════════════════════════════
+function switchATab(p,el){
+  document.querySelectorAll('.atab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.apanel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');g('ap-'+p).classList.add('active');
+}
+
+// ══════════════════════════════════════
+// LOGBOEK
+// ══════════════════════════════════════
+function renderLog(){
+  const fd=g('adm-fd'),fz=g('adm-fz');
+  const fdv=fd?fd.value:'',fzv=fz?fz.value.toLowerCase().trim():'';
+  let rows=bezoekers.filter(r=>(!fdv||r.datum===fdv)&&(!fzv||r.naam.toLowerCase().includes(fzv)));
+  const tb=g('log-body');if(!tb)return;
+  if(!rows.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;font-size:13px;">Geen resultaten</td></tr>';updateSelUI();return;}
+  tb.innerHTML=rows.map(r=>`<tr id="row-${r.id}" class="${selectedIds.has(r.id)?'sel-row':''}">
+    <td class="col-chk"><input type="checkbox" ${selectedIds.has(r.id)?'checked':''} onchange="toggleChk('${r.id}',this)" style="cursor:pointer;width:16px;height:16px;" /></td>
+    <td class="col-naam" title="${r.naam}"><strong>${r.naam}</strong></td>
+    <td class="col-firma" title="${r.firma}">${r.firma}</td>
+    <td class="col-voor" title="${r.voor}">${r.voor}</td>
+    <td class="col-aan">${r.aankomst}</td>
+    <td class="col-ver">${r.vertrek||'—'}</td>
+    <td class="col-stat">${r.vertrek?'<span class="badge badge-out">🔴 Weg</span>':'<span class="badge badge-in">🟢 Aanwezig</span>'}</td>
+    <td class="col-act">${r.fotoUrl?`<a href="${r.fotoUrl}" target="_blank" title="Foto bekijken">📷</a>`:''} <button class="icon-btn" onclick="confirmDelOne('${r.id}')" title="Verwijder">🗑️</button></td>
+  </tr>`).join('');
+  updateSelUI();
+}
+
+function toggleChk(id,el){
+  if(el.checked)selectedIds.add(id);else selectedIds.delete(id);
+  const row=g('row-'+id);if(row)row.classList.toggle('sel-row',el.checked);
+  updateSelUI();
+}
+function toggleAllChk(el){
+  document.querySelectorAll('#log-body input[type=checkbox]').forEach(cb=>{
+    cb.checked=el.checked;
+    const rowId=cb.closest('tr').id.replace('row-','');
+    if(el.checked)selectedIds.add(rowId);else selectedIds.delete(rowId);
+    cb.closest('tr').classList.toggle('sel-row',el.checked);
+  });
+  updateSelUI();
+}
+function updateSelUI(){
+  const cnt=selectedIds.size;
+  const lbl=g('sel-count-lbl'),btn=g('del-sel-btn');
+  if(lbl){lbl.style.display=cnt>0?'flex':'none';lbl.textContent=cnt+' geselecteerd';}
+  if(btn)btn.style.display=cnt>0?'flex':'none';
+}
+function showConfirm(msg,sub,action){
+  s('confirm-msg',msg);s('confirm-sub',sub);
+  g('confirm-overlay').classList.add('active');
+  g('confirm-ok').onclick=()=>{closeConfirm();action();};
+}
+function closeConfirm(){g('confirm-overlay').classList.remove('active');}
+function confirmDelOne(id){
+  const v=bezoekers.find(b=>b.id===id);
+  showConfirm('Rij verwijderen?',v?v.naam+' — '+v.aankomst:'',()=>{bezoekers=bezoekers.filter(b=>b.id!==id);selectedIds.delete(id);slaLokaalmOp();renderLog();});
+}
+function confirmDelSel(){
+  showConfirm(selectedIds.size+' rij'+(selectedIds.size>1?'en':'')+' verwijderen?','',()=>{bezoekers=bezoekers.filter(b=>!selectedIds.has(b.id));selectedIds.clear();const ca=g('chk-all');if(ca)ca.checked=false;slaLokaalmOp();renderLog();});
+}
+function confirmDelAll(){
+  showConfirm('Alle rijen verwijderen?','Het volledige logboek wordt gewist.',()=>{bezoekers=[];selectedIds.clear();const ca=g('chk-all');if(ca)ca.checked=false;slaLokaalmOp();renderLog();});
+}
+function exportCSV(){
+  const rows=[['Naam','Firma','Voor wie','Datum','Aankomst','Vertrek','Foto'],...bezoekers.map(r=>[r.naam,r.firma,r.voor,r.datum,r.aankomst,r.vertrek||'',r.fotoUrl||''])];
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='bezoekers_export.csv';a.click();
+}
+
+// ══════════════════════════════════════
+// MEDEWERKERS — CC VELD TOEGEVOEGD
+// ══════════════════════════════════════
+function renderMw(){
+  const list=g('mw-list');if(!list)return;
+  if(!mws.length){
+    list.innerHTML='<p style="font-size:13px;color:#94a3b8;padding:8px 0;">Nog geen medewerkers toegevoegd.</p>';
+    return;
+  }
+  list.innerHTML=mws.map(m=>`
+    <div class="mw-card" id="mwcard-${m.id}">
+      <div class="mw-info">
+        <p class="mw-name">${m.naam}</p>
+        <p class="mw-det">${m.functie} — ${m.afdeling}</p>
+        <p class="mw-det">✉️ ${m.email}</p>
+        ${m.cc?`<p class="mw-det">CC: ${m.cc}</p>`:''}
+      </div>
+      <button class="icon-btn" onclick="delMw('${m.id}')" title="Verwijder">🗑️</button>
+    </div>`).join('');
+}
+
+function showMwF(){g('mw-form').style.display='block';g('mw-add-btn').style.display='none';}
+function hideMwF(){
+  g('mw-form').style.display='none';g('mw-add-btn').style.display='flex';
+  ['mw-n','mw-f','mw-a','mw-e','mw-cc'].forEach(id=>{const e=g(id);if(e)e.value='';});
+}
+function saveMw(){
+  const n=g('mw-n').value.trim(),f=g('mw-f').value.trim(),a=g('mw-a').value.trim(),e=g('mw-e').value.trim(),cc=g('mw-cc')?g('mw-cc').value.trim():'';
+  if(!n||!e)return;
+  mws.push({id:'mw'+Date.now(),naam:n,functie:f,afdeling:a,email:e,cc});
+  renderMw();hideMwF();updateDropdown();
+  slaLokaalmOp();
+  sheetsSaveMedewerkers();
+}
+function delMw(id){
+  mws=mws.filter(m=>m.id!==id);
+  renderMw();updateDropdown();
+  slaLokaalmOp();
+  sheetsSaveMedewerkers();
+}
+
+function savePin(){
+  const v=g('pin-new').value.trim();
+  if(v.length===4&&/^\d{4}$/.test(v)){
+    pinCode=v;s('pin-save-msg','✅ Pincode opgeslagen');
+    g('pin-new').value='';setTimeout(()=>s('pin-save-msg',''),3000);
+    slaLokaalmOp();
+    sheetsSavePin(v);
+  }
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+updateDT();applyLang();
+const fd=g('adm-fd');if(fd)fd.value=vdg();
+setInterval(updateDT,30000);
+setInterval(verwerkQueue, 30000); // Elke 30s queue verwerken
+laadData();
+</script>
+</body>
+</html>
